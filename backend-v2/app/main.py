@@ -269,6 +269,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     yield event
             
             # Create a wrapper for the result that uses our interceptor
+            # Make it transparent so ChatKit can access all result attributes for citation handling
             class EventInterceptorWrapper:
                 def __init__(self, original_result, event_generator):
                     self._original = original_result
@@ -279,6 +280,11 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     
                 async def get_final_output(self):
                     return await self._original.get_final_output()
+                
+                # Forward all other attribute access to the original result
+                # This ensures ChatKit can access citation/annotation data
+                def __getattr__(self, name):
+                    return getattr(self._original, name)
             
             intercepted_result = EventInterceptorWrapper(result, event_interceptor())
             
