@@ -205,9 +205,12 @@ class MemoryStore(Store[dict[str, Any]]):
             "data": None,  # Will be set in Phase 2
         }
         
-        # Build upload URL for Phase 2
+        # Build full upload URL for Phase 2
         # ChatKit will POST the file bytes to this URL
-        upload_url = f"/upload/{attachment_id}"
+        # Must be a full URL, not just a path
+        import os
+        api_base = os.getenv("API_BASE_URL", "https://jason-coaching-backend-production.up.railway.app")
+        upload_url = f"{api_base}/upload/{attachment_id}"
         
         # Return proper Pydantic model based on MIME type
         if input.mime_type and input.mime_type.startswith("image/"):
@@ -217,6 +220,7 @@ class MemoryStore(Store[dict[str, Any]]):
                 mime_type=input.mime_type,
                 size_bytes=0,
                 upload_url=upload_url,
+                preview_url=None,  # Optional, can be set after upload
             )
         else:
             attachment = FileAttachment(
