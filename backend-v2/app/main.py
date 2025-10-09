@@ -105,7 +105,6 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 session=session,  # ✨ Native session support for agent memory
                 run_config=RunConfig(
                     model_settings=ModelSettings(
-                        temperature=0.7,
                         parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
                     )
                 ),
