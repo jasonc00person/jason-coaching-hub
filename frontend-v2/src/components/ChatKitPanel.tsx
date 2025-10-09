@@ -6,7 +6,6 @@ import {
   COMPOSER_PLACEHOLDER,
   GREETING,
   STARTER_PROMPTS,
-  FILE_UPLOAD_URL,
 } from "../lib/config";
 
 type ChatKitPanelProps = {
