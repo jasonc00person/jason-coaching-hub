@@ -56,7 +56,8 @@ def _is_tool_completion_item(item: Any) -> bool:
 class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
     def __init__(self, agent) -> None:
         self.store = MemoryStore()
-        super().__init__(self.store)
+        # Pass the store as both the store AND the attachment_store
+        super().__init__(self.store, attachment_store=self.store)
         self.assistant = agent
         # Cache SQLiteSession instances per thread
         self.sessions: dict[str, SQLiteSession] = {}
