@@ -279,7 +279,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 yield chatkit_event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
-        """Convert attachment to format GPT-5 can understand (images only for now)."""
+        """Convert attachment to format Agent SDK expects (images only for now)."""
         print(f"[to_message_content] Converting attachment {input.id} to message content")
         
         # Get attachment data from custom storage
@@ -299,7 +299,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         if not mime_type or not mime_type.startswith("image/"):
             raise RuntimeError(f"Only image attachments are supported. Got: {mime_type}")
         
-        # Encode to base64 for GPT-5
+        # Encode to base64 for Agent SDK
         data_bytes = attachment_data.get("data")
         if not data_bytes:
             print(f"[to_message_content] ERROR: No data bytes for attachment {input.id}")
@@ -308,14 +308,16 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         base64_image = base64.b64encode(data_bytes).decode("utf-8")
         print(f"[to_message_content] Encoded image to base64, length: {len(base64_image)}")
         
-        # Return in format GPT-5 expects
+        # Build data URL as per Agent SDK docs
+        data_url = f"data:{mime_type};base64,{base64_image}"
+        
+        # Return in Agent SDK format: ResponseInputImageParam
         result = {
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:{mime_type};base64,{base64_image}"
-            }
+            "type": "input_image",  # Agent SDK expects "input_image"
+            "detail": "auto",
+            "image_url": data_url,  # Direct data URL string
         }
-        print(f"[to_message_content] Returning image content to agent")
+        print(f"[to_message_content] Returning Agent SDK format: type=input_image")
         return result
 
 
