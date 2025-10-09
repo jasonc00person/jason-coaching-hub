@@ -158,11 +158,6 @@ def web_search(query: Annotated[str, "The search query to look up on the web"]) 
         return f"Error performing web search: {str(e)}"
 
 
-# Add .name attribute to function for agents SDK compatibility  
-# The SDK looks for t.name, not t.__name__
-web_search.name = "web_search"
-
-
 def build_file_search_tool() -> FileSearchTool:
     if not JASON_VECTOR_STORE_ID:
         raise RuntimeError(
@@ -178,6 +173,6 @@ jason_agent = Agent[AgentContext](
     model="gpt-4o-mini",
     name="Jason Cooperson - Social Media Marketing Expert",
     instructions=JASON_INSTRUCTIONS,
-    tools=[build_file_search_tool(), web_search],
+    tools=[build_file_search_tool()],  # Web search disabled - need proper tool wrapper
 )
 
