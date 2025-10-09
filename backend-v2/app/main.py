@@ -285,7 +285,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     run_config=RunConfig(
                         model_settings=ModelSettings(
                             parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
-                            reasoning_effort="low",  # ⚡ Optimized for speed (20-30% faster)
+                            reasoning_effort="medium",  # 🧠 GPT-5 handles deeper reasoning well
                             verbosity="low",  # 💬 Short responses (matches voice guidelines)
                         )
                     ),
@@ -303,7 +303,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 run_config=RunConfig(
                     model_settings=ModelSettings(
                         parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
-                        reasoning_effort="low",  # ⚡ Optimized for speed (20-30% faster)
+                        reasoning_effort="medium",  # 🧠 GPT-5 handles deeper reasoning well
                         verbosity="low",  # 💬 Short responses (matches voice guidelines)
                     )
                 ),
@@ -313,7 +313,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 yield chatkit_event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
-        """Convert attachment to format Agent SDK expects (images only for now)."""
+        """Convert attachment to format Agent SDK expects (images and text files)."""
         if DEBUG_MODE:
             print(f"[to_message_content] Converting attachment {input.id} to message content")
         
@@ -329,35 +329,54 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             raise RuntimeError(f"Attachment {input.id} not found")
         
         mime_type = attachment_data["mime_type"]
+        data_bytes = attachment_data.get("data")
+        
         if DEBUG_MODE:
             print(f"[to_message_content] Attachment MIME type: {mime_type}")
         
-        # Only support images
-        if not mime_type or not mime_type.startswith("image/"):
-            raise RuntimeError(f"Only image attachments are supported. Got: {mime_type}")
-        
-        # Encode to base64 for Agent SDK
-        data_bytes = attachment_data.get("data")
         if not data_bytes:
             print(f"[to_message_content] ERROR: No data bytes for attachment {input.id}")
             raise RuntimeError(f"No data bytes for attachment {input.id}")
         
-        base64_image = base64.b64encode(data_bytes).decode("utf-8")
-        if DEBUG_MODE:
-            print(f"[to_message_content] Encoded image to base64, length: {len(base64_image)}")
+        # Handle text files (markdown, txt, etc.)
+        if mime_type and (mime_type.startswith("text/") or mime_type in ["application/json"]):
+            try:
+                text_content = data_bytes.decode("utf-8")
+                if DEBUG_MODE:
+                    print(f"[to_message_content] Decoded text file, length: {len(text_content)} chars")
+                
+                # Return as input_text with filename context
+                result = {
+                    "type": "input_text",
+                    "text": f"File: {attachment_data['name']}\n\n{text_content}"
+                }
+                if DEBUG_MODE:
+                    print(f"[to_message_content] Returning Agent SDK format: type=input_text")
+                return result
+            except UnicodeDecodeError:
+                raise RuntimeError(f"Failed to decode text file: {attachment_data['name']}")
         
-        # Build data URL as per Agent SDK docs
-        data_url = f"data:{mime_type};base64,{base64_image}"
+        # Handle images
+        elif mime_type and mime_type.startswith("image/"):
+            base64_image = base64.b64encode(data_bytes).decode("utf-8")
+            if DEBUG_MODE:
+                print(f"[to_message_content] Encoded image to base64, length: {len(base64_image)}")
+            
+            # Build data URL as per Agent SDK docs
+            data_url = f"data:{mime_type};base64,{base64_image}"
+            
+            # Return in Agent SDK format: ResponseInputImageParam
+            result = {
+                "type": "input_image",
+                "detail": "auto",
+                "image_url": data_url,
+            }
+            if DEBUG_MODE:
+                print(f"[to_message_content] Returning Agent SDK format: type=input_image")
+            return result
         
-        # Return in Agent SDK format: ResponseInputImageParam
-        result = {
-            "type": "input_image",  # Agent SDK expects "input_image"
-            "detail": "auto",
-            "image_url": data_url,  # Direct data URL string
-        }
-        if DEBUG_MODE:
-            print(f"[to_message_content] Returning Agent SDK format: type=input_image")
-        return result
+        else:
+            raise RuntimeError(f"Unsupported attachment type: {mime_type}. Supported: images (image/*) and text files (text/*, application/json)")
 
 
 jason_server = JasonCoachingServer(agent=jason_agent)
