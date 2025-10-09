@@ -189,30 +189,43 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
         """Convert attachment to format GPT-5 can understand (images only for now)."""
+        print(f"[to_message_content] Converting attachment {input.id} to message content")
+        
         # Get attachment data from custom storage
         if not hasattr(self.store, '_attachment_data'):
             raise RuntimeError(f"Attachment storage not initialized")
         
         attachment_data = self.store._attachment_data.get(input.id)
         if not attachment_data:
+            print(f"[to_message_content] ERROR: Attachment {input.id} not found in _attachment_data")
+            print(f"[to_message_content] Available attachments: {list(self.store._attachment_data.keys())}")
             raise RuntimeError(f"Attachment {input.id} not found")
         
         mime_type = attachment_data["mime_type"]
+        print(f"[to_message_content] Attachment MIME type: {mime_type}")
         
         # Only support images
         if not mime_type or not mime_type.startswith("image/"):
             raise RuntimeError(f"Only image attachments are supported. Got: {mime_type}")
         
         # Encode to base64 for GPT-5
-        base64_image = base64.b64encode(attachment_data["data"]).decode("utf-8")
+        data_bytes = attachment_data.get("data")
+        if not data_bytes:
+            print(f"[to_message_content] ERROR: No data bytes for attachment {input.id}")
+            raise RuntimeError(f"No data bytes for attachment {input.id}")
+        
+        base64_image = base64.b64encode(data_bytes).decode("utf-8")
+        print(f"[to_message_content] Encoded image to base64, length: {len(base64_image)}")
         
         # Return in format GPT-5 expects
-        return {
+        result = {
             "type": "image_url",
             "image_url": {
                 "url": f"data:{mime_type};base64,{base64_image}"
             }
         }
+        print(f"[to_message_content] Returning image content to agent")
+        return result
 
 
 jason_server = JasonCoachingServer(agent=jason_agent)
