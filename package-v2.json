@@ -1,0 +1,23 @@
+{
+  "name": "jason-coaching-chatkit-v2",
+  "version": "2.0.0",
+  "description": "Jason's Coaching ChatKit - Refactored with direct vector store access",
+  "scripts": {
+    "backend": "cd backend-v2 && python3 -m uvicorn app.main:app --reload --port 8000",
+    "frontend": "cd frontend-v2 && npm run dev",
+    "install:backend": "cd backend-v2 && pip3 install -r requirements.txt",
+    "install:frontend": "cd frontend-v2 && npm install",
+    "install:all": "npm run install:backend && npm run install:frontend"
+  },
+  "keywords": [
+    "chatkit",
+    "openai",
+    "fastapi",
+    "react",
+    "typescript",
+    "vector-store",
+    "agents-sdk"
+  ],
+  "author": "Jason Cooperson",
+  "license": "MIT"
+}
