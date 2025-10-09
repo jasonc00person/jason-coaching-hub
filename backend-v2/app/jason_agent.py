@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import os
+from typing import Annotated
 
 from agents import Agent
 from agents.models.openai_responses import FileSearchTool
 from chatkit.agents import AgentContext
+from tavily import TavilyClient
 
 JASON_VECTOR_STORE_ID = os.getenv("JASON_VECTOR_STORE_ID", "vs_68e6b33ec38481919601875ea1e2287c")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+
+# Initialize Tavily client
+tavily_client = TavilyClient(api_key=TAVILY_API_KEY) if TAVILY_API_KEY else None
 
 JASON_INSTRUCTIONS = """
 You are Jason Cooperson, a 23 year old viral social media marketing expert. Your job is to help the user with whatever questions or problems they may have.
@@ -24,14 +29,14 @@ You have access to a comprehensive coaching knowledge base containing your prove
 
 ALWAYS give your answer based on data from the knowledge base first. Search your files before responding.
 
-If there is nothing in the knowledge base related to the user's question or problem, you can use the Web Search tool to find current information online. This is especially useful for:
-- Current trends, news, or viral content examples
-- Latest platform updates or algorithm changes (TikTok, Instagram, YouTube, etc.)
-- Recent case studies or viral examples
-- Current best practices in social media marketing
-- Real-time data, statistics, or news
+If there is nothing in the knowledge base related to the user's question or problem, then just let them know you couldn't find anything in the course material about it, and then do your best to give a response on your own.
 
-Use web search when the user asks about recent events, current trends, breaking news, or things not covered in your knowledge base.
+You also have access to a Web Search tool that lets you search the internet for current information, trends, news, and real-time data. Use web search when:
+- Users ask about current events, trending topics, or recent news
+- Questions about current social media trends, viral content, or algorithm updates
+- Looking up current statistics, market data, or competitor information
+- Any question requiring up-to-date information from the web
+- Verifying or finding information that's not in your knowledge base
 
 
 ALWAYS follow these Voice & Tone Guidelines in your responses.
@@ -128,6 +133,34 @@ Avoid formal intros like "Hello, today I will explain…" — always jump straig
 """.strip()
 
 
+def web_search(query: Annotated[str, "The search query to look up on the web"]) -> str:
+    """
+    Search the web for current information, trends, news, and real-time data.
+    Returns relevant search results from the internet.
+    """
+    if not tavily_client:
+        return "Web search is currently unavailable. Please set the TAVILY_API_KEY environment variable."
+    
+    try:
+        # Perform the search
+        response = tavily_client.search(query, max_results=5)
+        
+        # Format the results
+        results = []
+        for idx, result in enumerate(response.get("results", []), 1):
+            title = result.get("title", "")
+            content = result.get("content", "")
+            url = result.get("url", "")
+            results.append(f"{idx}. {title}\n{content}\nSource: {url}\n")
+        
+        if not results:
+            return f"No results found for: {query}"
+        
+        return "\n".join(results)
+    except Exception as e:
+        return f"Error performing web search: {str(e)}"
+
+
 def build_file_search_tool() -> FileSearchTool:
     if not JASON_VECTOR_STORE_ID:
         raise RuntimeError(
@@ -137,51 +170,6 @@ def build_file_search_tool() -> FileSearchTool:
         vector_store_ids=[JASON_VECTOR_STORE_ID],
         max_num_results=10,
     )
-
-
-def web_search(query: str, search_depth: str = "basic") -> str:
-    """
-    Search the web for current information using Tavily.
-    
-    Args:
-        query: The search query
-        search_depth: Either 'basic' for quick results or 'advanced' for comprehensive search
-        
-    Returns:
-        Formatted search results as a string
-    """
-    from tavily import TavilyClient
-    
-    if not TAVILY_API_KEY:
-        return "Web search is not configured. Please set TAVILY_API_KEY environment variable."
-    
-    try:
-        tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
-        
-        response = tavily_client.search(
-            query=query,
-            search_depth=search_depth,
-            max_results=5,
-            include_answer=True
-        )
-        
-        # Format the results
-        result_text = []
-        
-        # Add the AI-generated answer if available
-        if response.get("answer"):
-            result_text.append(f"Summary: {response['answer']}\n")
-        
-        # Add individual results
-        result_text.append("Search Results:")
-        for i, result in enumerate(response.get("results", []), 1):
-            result_text.append(f"\n{i}. {result.get('title', 'No title')}")
-            result_text.append(f"   URL: {result.get('url', 'N/A')}")
-            result_text.append(f"   {result.get('content', 'No content')}")
-        
-        return "\n".join(result_text)
-    except Exception as e:
-        return f"Web search error: {str(e)}"
 
 
 jason_agent = Agent[AgentContext](
