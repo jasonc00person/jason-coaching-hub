@@ -51,7 +51,8 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
   const chatkit = useChatKit({
     api: { 
       url: `${CHATKIT_API_URL}?sid=${sessionId}`, 
-      domainKey: CHATKIT_API_DOMAIN_KEY
+      domainKey: CHATKIT_API_DOMAIN_KEY,
+      uploadStrategy: "chatkit" // Use ChatKit's built-in upload handling
     },
     theme: {
       colorScheme: theme,
