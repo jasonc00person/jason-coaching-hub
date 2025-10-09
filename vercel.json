@@ -3,17 +3,7 @@
   "outputDirectory": "frontend-v2/dist",
   "installCommand": "cd frontend-v2 && npm install",
   "framework": "vite",
-  "functions": {
-    "api/index.py": {
-      "runtime": "python3.9",
-      "maxDuration": 60
-    }
-  },
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
