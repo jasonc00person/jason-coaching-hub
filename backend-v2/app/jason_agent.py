@@ -6,8 +6,6 @@ from agents import Agent
 from agents.models.openai_responses import FileSearchTool, WebSearchTool
 from chatkit.agents import AgentContext
 
-from .guardrails import topic_guardrail
-
 JASON_VECTOR_STORE_ID = os.getenv("JASON_VECTOR_STORE_ID", "vs_68e6b33ec38481919601875ea1e2287c")
 
 JASON_INSTRUCTIONS = """
@@ -260,6 +258,5 @@ jason_agent = Agent[AgentContext](
     name="Jason Cooperson - Social Media Marketing Expert",
     instructions=JASON_INSTRUCTIONS,
     tools=[build_file_search_tool(), build_web_search_tool()],  # ✨ Enhanced tools
-    input_guardrails=[topic_guardrail],  # ✨ Protect against off-topic requests
 )
 
