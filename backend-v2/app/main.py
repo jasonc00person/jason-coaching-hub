@@ -184,14 +184,14 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         print(f"[respond] Message text: '{message_text[:50]}...'" if message_text else "[respond] No text")
         print(f"[respond] Found {len(attachment_ids)} attachment(s): {attachment_ids}")
         
-        # Build input content - either string or list of content parts
+        # Build input content - either string or list with message wrapper
         if attachment_ids:
-            # Build multi-part input with text and attachments
-            input_content = []
+            # Build multi-part message content with text and attachments
+            message_content = []
             
             # Add text if present
             if message_text:
-                input_content.append({"type": "text", "text": message_text})
+                message_content.append({"type": "input_text", "text": message_text})
             
             # Convert and add each attachment
             for attachment_id in attachment_ids:
@@ -202,14 +202,21 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     
                     # Convert to Agent SDK format
                     attachment_content = await self.to_message_content(attachment)
-                    input_content.append(attachment_content)
+                    message_content.append(attachment_content)
                     print(f"[respond] Converted attachment {attachment_id} to agent format")
                 except Exception as e:
                     print(f"[respond] ERROR processing attachment {attachment_id}: {e}")
                     import traceback
                     traceback.print_exc()
             
-            agent_input = input_content
+            # Wrap in a message format for Responses API
+            agent_input = [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": message_content
+                }
+            ]
         else:
             # Just text, no attachments
             agent_input = message_text
