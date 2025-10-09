@@ -214,13 +214,15 @@ class MemoryStore(Store[dict[str, Any]]):
         
         # Return proper Pydantic model based on MIME type
         if input.mime_type and input.mime_type.startswith("image/"):
+            # For images, we could optionally provide a preview_url
+            # but we'll omit it for now since the image hasn't been uploaded yet
             attachment = ImageAttachment(
                 id=attachment_id,
                 name=input.name or "unnamed",
                 mime_type=input.mime_type,
                 size_bytes=0,
                 upload_url=upload_url,
-                preview_url=None,  # Optional, can be set after upload
+                # Don't include preview_url - it's optional and will default to None properly
             )
         else:
             attachment = FileAttachment(
