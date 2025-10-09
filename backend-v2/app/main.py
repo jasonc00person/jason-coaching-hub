@@ -155,6 +155,15 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             request_context=context,
         )
         
+        # 🤔 Emit initial "Thinking..." status BEFORE streaming starts
+        if ProgressUpdateEvent is not None:
+            try:
+                thinking_event = ProgressUpdateEvent(text="🤔 Thinking...")
+                yield thinking_event
+                print("🤔 Yielded initial thinking status to ChatKit")
+            except Exception as e:
+                print(f"⚠️  Failed to yield initial thinking status: {e}")
+        
         # Use tracing and session for better debugging and memory management
         with trace(f"Jason coaching - {thread.id[:8]}"):
             result = Runner.run_streamed(
@@ -182,21 +191,8 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 from agents import ItemHelpers
                 import uuid
                 
-                # Emit initial thinking status before processing events
-                thinking_emitted = False
-                
                 async for event in result.stream_events():
                     event_type = event.type
-                    
-                    # Emit "Thinking..." on first event to replace default 3-dot animation
-                    if not thinking_emitted and ProgressUpdateEvent is not None:
-                        try:
-                            await agent_context.stream(ProgressUpdateEvent(text="🤔 Thinking..."))
-                            print("🤔 Streamed initial thinking status to ChatKit")
-                            thinking_emitted = True
-                        except Exception as e:
-                            print(f"⚠️  Failed to emit initial thinking status: {e}")
-                            thinking_emitted = True  # Don't try again
                     
                     # Detect tool calls and emit progress updates
                     if event_type == "run_item_stream_event":
