@@ -161,8 +161,25 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         if not isinstance(item, UserMessageItem):
             return
 
+        # Debug: Print the entire item structure
+        print(f"[respond] UserMessageItem attributes: {dir(item)}")
+        print(f"[respond] UserMessageItem data: {item}")
+        
         message_text = _user_message_text(item)
-        attachment_ids = _get_attachment_refs(item)
+        
+        # Check for attachments at the item level (not just in content)
+        attachment_ids = []
+        if hasattr(item, "attachments") and item.attachments:
+            print(f"[respond] Found item.attachments: {item.attachments}")
+            for att in item.attachments:
+                if hasattr(att, "id"):
+                    attachment_ids.append(att.id)
+                elif isinstance(att, str):
+                    attachment_ids.append(att)
+        
+        # Also check content parts
+        content_attachment_ids = _get_attachment_refs(item)
+        attachment_ids.extend(content_attachment_ids)
         
         print(f"[respond] Message text: '{message_text[:50]}...'" if message_text else "[respond] No text")
         print(f"[respond] Found {len(attachment_ids)} attachment(s): {attachment_ids}")
