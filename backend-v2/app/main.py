@@ -31,7 +31,7 @@ import tempfile
 import base64
 import mimetypes
 
-from .jason_agent import jason_agent, JASON_VECTOR_STORE_ID
+from .jason_agent import jason_agent, JASON_VECTOR_STORE_ID, select_agent_for_query
 from .memory_store import MemoryStore
 
 
@@ -91,6 +91,11 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
 
         # Get SQLiteSession for this thread (for agent memory)
         session = self._get_session(thread.id)
+        
+        # 🎯 Smart routing: Use GPT-5 Mini for simple queries, GPT-5 for complex ones
+        selected_agent = select_agent_for_query(message_text)
+        model_name = "GPT-5" if selected_agent.model == "gpt-5" else "GPT-5 Mini"
+        print(f"[Routing] Using {model_name} for query: '{message_text[:50]}...'")
 
         agent_context = AgentContext(
             thread=thread,
@@ -101,7 +106,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         # Use tracing and session for better debugging and memory management
         with trace(f"Jason coaching - {thread.id[:8]}"):
             result = Runner.run_streamed(
-                self.assistant,
+                selected_agent,  # 🎯 Dynamically selected agent
                 message_text,
                 context=agent_context,
                 session=session,  # ✨ Native session support for agent memory

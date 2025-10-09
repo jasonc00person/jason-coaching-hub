@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 from agents import Agent
 from agents.models.openai_responses import FileSearchTool, WebSearchTool
@@ -115,10 +116,68 @@ def build_web_search_tool() -> WebSearchTool:
     )
 
 
-jason_agent = Agent[AgentContext](
-    model="gpt-5",  # 🔥 Latest flagship model with built-in chain-of-thought reasoning
+# Create both agents for smart routing
+jason_agent_full = Agent[AgentContext](
+    model="gpt-5",  # 🔥 Full power for complex queries
     name="Jason Cooperson - Social Media Marketing Expert",
     instructions=JASON_INSTRUCTIONS,
-    tools=[build_file_search_tool(), build_web_search_tool()],  # ✨ Enhanced tools
+    tools=[build_file_search_tool(), build_web_search_tool()],
 )
+
+jason_agent_mini = Agent[AgentContext](
+    model="gpt-5-mini",  # 💰 Cost-effective for simple queries
+    name="Jason Cooperson - Social Media Marketing Expert",
+    instructions=JASON_INSTRUCTIONS,
+    tools=[build_file_search_tool(), build_web_search_tool()],
+)
+
+# Default to full agent (will be routed dynamically)
+jason_agent = jason_agent_full
+
+
+def select_agent_for_query(message: str) -> Agent[AgentContext]:
+    """
+    Smart routing: Choose GPT-5 Mini for simple queries, GPT-5 for complex ones.
+    
+    Simple queries (Mini): greetings, short questions, single-concept questions
+    Complex queries (Full): strategy, multi-step, detailed analysis, "how to", comparisons
+    """
+    message_lower = message.lower().strip()
+    word_count = len(message.split())
+    
+    # Complex query indicators
+    complex_keywords = [
+        'strategy', 'plan', 'funnel', 'campaign', 'analyze', 'compare',
+        'explain', 'how to', 'why', 'difference', 'optimize', 'improve',
+        'framework', 'structure', 'breakdown', 'detail', 'step by step',
+        'help me create', 'help me build', 'show me how'
+    ]
+    
+    # Simple query indicators
+    simple_patterns = [
+        r'^(hi|hey|hello|yo|sup|what\'s up)',  # Greetings
+        r'\?$',  # Single question mark (usually simple)
+    ]
+    
+    # Use full agent if:
+    # 1. Message is long (30+ words)
+    # 2. Contains complex keywords
+    # 3. Has multiple sentences/questions
+    if word_count >= 30:
+        return jason_agent_full
+    
+    for keyword in complex_keywords:
+        if keyword in message_lower:
+            return jason_agent_full
+    
+    # Use mini for short, simple queries
+    for pattern in simple_patterns:
+        if re.match(pattern, message_lower):
+            return jason_agent_mini
+    
+    if word_count <= 10:
+        return jason_agent_mini
+    
+    # Default to full for everything else (better safe than sorry)
+    return jason_agent_full
 
