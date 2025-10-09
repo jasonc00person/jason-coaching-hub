@@ -195,15 +195,33 @@ async def health_check() -> dict[str, str]:
 
 
 @app.get("/")
-async def root() -> dict[str, str]:
+async def root() -> dict[str, Any]:
     return {
         "message": "Jason's Coaching ChatKit API",
         "status": "running",
+        "model": "GPT-5 with smart routing (GPT-5 Mini for simple queries)",
+        "features": [
+            "Image analysis (vision)",
+            "Voice transcription (Whisper)",
+            "Text-to-speech (TTS)",
+            "Smart model routing",
+            "Extended context (400k tokens)",
+            "Reasoning control",
+            "Parallel tool calls"
+        ],
         "endpoints": {
             "chatkit": "/chatkit",
             "session": "/api/chatkit/session",
             "health": "/health",
-            "files": "/api/files",
+            "files": {
+                "list": "GET /api/files",
+                "upload": "POST /api/files/upload",
+                "delete": "DELETE /api/files/{file_id}"
+            },
+            "voice": {
+                "transcribe": "POST /api/voice/transcribe",
+                "speak": "POST /api/voice/speak"
+            }
         },
     }
 
@@ -347,3 +365,72 @@ async def delete_file(file_id: str) -> dict[str, str]:
         return {"status": "deleted", "file_id": file_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
+
+
+@app.post("/api/voice/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)) -> dict[str, str]:
+    """
+    Transcribe audio to text using Whisper API.
+    """
+    try:
+        # Read audio file
+        content = await file.read()
+        
+        # Create temp file with correct extension
+        suffix = f"_{file.filename}" if file.filename else ".mp3"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+        
+        try:
+            # Transcribe with Whisper
+            with open(tmp_path, "rb") as audio_file:
+                transcript = openai_client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="text"
+                )
+            
+            return {
+                "text": transcript,
+                "status": "success"
+            }
+        finally:
+            # Clean up temp file
+            os.unlink(tmp_path)
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to transcribe audio: {str(e)}")
+
+
+@app.post("/api/voice/speak")
+async def text_to_speech(request: Request) -> Response:
+    """
+    Convert text to speech using OpenAI TTS API.
+    """
+    try:
+        body = await request.json()
+        text = body.get("text", "")
+        voice = body.get("voice", "alloy")  # alloy, echo, fable, onyx, nova, shimmer
+        
+        if not text:
+            raise HTTPException(status_code=400, detail="Text is required")
+        
+        # Generate speech
+        response = openai_client.audio.speech.create(
+            model="tts-1",  # or tts-1-hd for higher quality
+            voice=voice,
+            input=text
+        )
+        
+        # Return audio data
+        return Response(
+            content=response.content,
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": "attachment; filename=speech.mp3"
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate speech: {str(e)}")
