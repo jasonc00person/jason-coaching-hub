@@ -134,10 +134,7 @@ Avoid formal intros like "Hello, today I will explain…" — always jump straig
 
 
 def web_search(query: Annotated[str, "The search query to look up on the web"]) -> str:
-    """
-    Search the web for current information, trends, news, and real-time data.
-    Returns relevant search results from the internet.
-    """
+    """Search the web for current information, trends, news, and real-time data."""
     if not tavily_client:
         return "Web search is currently unavailable. Please set the TAVILY_API_KEY environment variable."
     
@@ -161,6 +158,11 @@ def web_search(query: Annotated[str, "The search query to look up on the web"]) 
         return f"Error performing web search: {str(e)}"
 
 
+# Add .name attribute to function for agents SDK compatibility  
+# The SDK looks for t.name, not t.__name__
+web_search.name = "web_search"
+
+
 def build_file_search_tool() -> FileSearchTool:
     if not JASON_VECTOR_STORE_ID:
         raise RuntimeError(
@@ -176,6 +178,6 @@ jason_agent = Agent[AgentContext](
     model="gpt-4o-mini",
     name="Jason Cooperson - Social Media Marketing Expert",
     instructions=JASON_INSTRUCTIONS,
-    tools=[build_file_search_tool()],  # TODO: Add web_search back with proper tool wrapper
+    tools=[build_file_search_tool(), web_search],
 )
 
