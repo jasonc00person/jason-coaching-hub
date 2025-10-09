@@ -413,13 +413,18 @@ async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
         
         print(f"[Upload] Stored attachment: {attachment_id}")
         
+        # Build public URL for the attachment
+        api_base = os.getenv("API_BASE_URL", "https://jason-coaching-backend-production.up.railway.app")
+        attachment_url = f"{api_base}/api/files/attachment/{attachment_id}"
+        
         # Return format that ChatKit expects for direct upload
-        # Must match the Attachment type structure exactly
+        # Include URL so ChatKit can retrieve/verify the file
         response_data = {
             "id": attachment_id,
             "name": file.filename or "unnamed",
             "mimeType": file.content_type or "application/octet-stream",
             "size": len(content),
+            "url": attachment_url,
         }
         
         print(f"[Upload] Returning response: {response_data}")
@@ -446,12 +451,18 @@ async def get_attachment(attachment_id: str) -> Response:
     Retrieve an uploaded attachment by ID.
     """
     try:
+        print(f"[Get Attachment] Requesting attachment: {attachment_id}")
+        
         if not hasattr(jason_server.store, '_attachment_data'):
+            print(f"[Get Attachment] No attachments stored")
             raise HTTPException(status_code=404, detail="Attachment not found")
         
         attachment_data = jason_server.store._attachment_data.get(attachment_id)
         if not attachment_data:
+            print(f"[Get Attachment] Attachment {attachment_id} not found in store")
             raise HTTPException(status_code=404, detail=f"Attachment {attachment_id} not found")
+        
+        print(f"[Get Attachment] Returning {attachment_data['mime_type']} file: {attachment_data['name']}")
         
         return Response(
             content=attachment_data["data"],
@@ -459,12 +470,16 @@ async def get_attachment(attachment_id: str) -> Response:
             headers={
                 "Content-Disposition": f'inline; filename="{attachment_data["name"]}"',
                 "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
             }
         )
     except HTTPException:
         raise
     except Exception as e:
         print(f"[Get Attachment] ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to retrieve attachment: {str(e)}")
 
 
