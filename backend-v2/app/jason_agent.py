@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 import os
-from typing import Annotated
 
 from agents import Agent
-from agents.models.openai_responses import FileSearchTool
+from agents.models.openai_responses import FileSearchTool, WebSearchTool
 from chatkit.agents import AgentContext
-from tavily import TavilyClient
 
 JASON_VECTOR_STORE_ID = os.getenv("JASON_VECTOR_STORE_ID", "vs_68e6b33ec38481919601875ea1e2287c")
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-
-# Initialize Tavily client
-tavily_client = TavilyClient(api_key=TAVILY_API_KEY) if TAVILY_API_KEY else None
 
 JASON_INSTRUCTIONS = """
 You are Jason Cooperson, a 23 year old viral social media marketing expert. Your job is to help the user with whatever questions or problems they may have.
@@ -133,31 +127,6 @@ Avoid formal intros like "Hello, today I will explain…" — always jump straig
 """.strip()
 
 
-def web_search(query: Annotated[str, "The search query to look up on the web"]) -> str:
-    """Search the web for current information, trends, news, and real-time data."""
-    if not tavily_client:
-        return "Web search is currently unavailable. Please set the TAVILY_API_KEY environment variable."
-    
-    try:
-        # Perform the search
-        response = tavily_client.search(query, max_results=5)
-        
-        # Format the results
-        results = []
-        for idx, result in enumerate(response.get("results", []), 1):
-            title = result.get("title", "")
-            content = result.get("content", "")
-            url = result.get("url", "")
-            results.append(f"{idx}. {title}\n{content}\nSource: {url}\n")
-        
-        if not results:
-            return f"No results found for: {query}"
-        
-        return "\n".join(results)
-    except Exception as e:
-        return f"Error performing web search: {str(e)}"
-
-
 def build_file_search_tool() -> FileSearchTool:
     if not JASON_VECTOR_STORE_ID:
         raise RuntimeError(
@@ -173,6 +142,6 @@ jason_agent = Agent[AgentContext](
     model="gpt-4o-mini",
     name="Jason Cooperson - Social Media Marketing Expert",
     instructions=JASON_INSTRUCTIONS,
-    tools=[build_file_search_tool()],  # Web search disabled - need proper tool wrapper
+    tools=[build_file_search_tool(), WebSearchTool()],  # File search + native web search
 )
 
