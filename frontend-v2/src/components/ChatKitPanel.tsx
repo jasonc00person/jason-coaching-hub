@@ -12,43 +12,41 @@ type ChatKitPanelProps = {
   theme: "light" | "dark";
 };
 
+// Generate session ID outside component to ensure it's ready immediately
+const getOrCreateSessionId = (): string => {
+  let sid = sessionStorage.getItem('chatSessionId');
+  if (!sid) {
+    sid = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem('chatSessionId', sid);
+  }
+  return sid;
+};
+
 export function ChatKitPanel({ theme }: ChatKitPanelProps) {
   const [integrationError, setIntegrationError] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string>("");
   const isMounted = useRef(true);
+  // Get session ID immediately - don't wait for useEffect
+  const sessionId = useRef(getOrCreateSessionId()).current;
 
   useEffect(() => {
     isMounted.current = true;
     
-    // Get or create a session ID that persists only for this browser session
-    let sid = sessionStorage.getItem('chatSessionId');
-    if (!sid) {
-      sid = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      sessionStorage.setItem('chatSessionId', sid);
-      if (import.meta.env.DEV) {
-        console.log("[ChatKitPanel] Created new session ID:", sid);
-      }
-    } else {
-      if (import.meta.env.DEV) {
-        console.log("[ChatKitPanel] Using existing session ID:", sid);
-      }
-    }
-    setSessionId(sid);
-    
     if (import.meta.env.DEV) {
       console.log("[ChatKitPanel] Component mounted");
-      console.log("[ChatKitPanel] API URL:", CHATKIT_API_URL);
+      console.log("[ChatKitPanel] Session ID:", sessionId);
+      console.log("[ChatKitPanel] API URL:", `${CHATKIT_API_URL}?sid=${sessionId}`);
       console.log("[ChatKitPanel] Domain Key:", CHATKIT_API_DOMAIN_KEY);
       console.log("[ChatKitPanel] Session-based chat - history cleared on refresh");
     }
+    
     return () => {
       isMounted.current = false;
     };
-  }, []);
+  }, [sessionId]);
 
   const chatkit = useChatKit({
     api: { 
-      url: sessionId ? `${CHATKIT_API_URL}?sid=${sessionId}` : CHATKIT_API_URL, 
+      url: `${CHATKIT_API_URL}?sid=${sessionId}`, 
       domainKey: CHATKIT_API_DOMAIN_KEY
     },
     theme: {

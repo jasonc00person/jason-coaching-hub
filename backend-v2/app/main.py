@@ -119,13 +119,23 @@ def get_server() -> JasonCoachingServer:
 async def chatkit_endpoint(
     request: Request, server: JasonCoachingServer = Depends(get_server)
 ) -> Response:
-    payload = await request.body()
-    result = await server.process(payload, {"request": request})
-    if isinstance(result, StreamingResult):
-        return StreamingResponse(result, media_type="text/event-stream")
-    if hasattr(result, "json"):
-        return Response(content=result.json, media_type="application/json")
-    return JSONResponse(result)
+    try:
+        payload = await request.body()
+        # Log session ID for debugging
+        session_id = request.query_params.get("sid", "default")
+        print(f"[ChatKit] Processing request for session: {session_id}")
+        
+        result = await server.process(payload, {"request": request})
+        if isinstance(result, StreamingResult):
+            return StreamingResponse(result, media_type="text/event-stream")
+        if hasattr(result, "json"):
+            return Response(content=result.json, media_type="application/json")
+        return JSONResponse(result)
+    except Exception as e:
+        print(f"[ChatKit] Error processing request: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/health")

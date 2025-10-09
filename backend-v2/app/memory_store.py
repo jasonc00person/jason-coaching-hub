@@ -109,7 +109,7 @@ class MemoryStore(Store[dict[str, Any]]):
         state = threads.get(thread_id)
         if state is None:
             state = _ThreadState(
-                thread=ThreadMetadata(id=thread_id, created_at=datetime.now(timezone.utc)),
+                thread=ThreadMetadata(id=thread_id, created_at=datetime.now(tz=timezone.utc)),
                 items=[],
             )
             threads[thread_id] = state
@@ -125,7 +125,7 @@ class MemoryStore(Store[dict[str, Any]]):
     ) -> Page[ThreadItem]:
         items = [item.model_copy(deep=True) for item in self._items(thread_id, context)]
         items.sort(
-            key=lambda item: getattr(item, "created_at", datetime.now(timezone.utc)),
+            key=lambda item: getattr(item, "created_at", datetime.now(tz=timezone.utc)),
             reverse=(order == "desc"),
         )
 
