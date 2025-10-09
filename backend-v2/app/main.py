@@ -369,8 +369,21 @@ async def list_files() -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Failed to list files: {str(e)}")
 
 
+@app.options("/api/files/upload")
+async def upload_file_options():
+    """Handle CORS preflight for file uploads."""
+    return JSONResponse(
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+
 @app.post("/api/files/upload")
-async def upload_file(file: UploadFile = File(...)) -> dict[str, Any]:
+async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
     """
     Upload a file for ChatKit attachments.
     Returns format compatible with ChatKit's direct upload strategy.
@@ -400,19 +413,63 @@ async def upload_file(file: UploadFile = File(...)) -> dict[str, Any]:
         
         print(f"[Upload] Stored attachment: {attachment_id}")
         
+        # Get base URL from environment or construct it
+        api_base = os.getenv("API_BASE_URL", "https://jason-coaching-backend-production.up.railway.app")
+        attachment_url = f"{api_base}/api/files/attachment/{attachment_id}"
+        
         # Return format ChatKit expects for direct upload
-        return {
+        response_data = {
             "id": attachment_id,
-            "name": file.filename,
+            "name": file.filename or "unnamed",
             "size": len(content),
             "mimeType": file.content_type or "application/octet-stream",
+            "url": attachment_url,  # Include URL for retrieval
         }
+        
+        print(f"[Upload] Returning response: {response_data}")
+        
+        return JSONResponse(
+            content=response_data,
+            status_code=200,
+            headers={
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+            }
+        )
             
     except Exception as e:
         print(f"[Upload] ERROR: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
+
+
+@app.get("/api/files/attachment/{attachment_id}")
+async def get_attachment(attachment_id: str) -> Response:
+    """
+    Retrieve an uploaded attachment by ID.
+    """
+    try:
+        if not hasattr(jason_server.store, '_attachment_data'):
+            raise HTTPException(status_code=404, detail="Attachment not found")
+        
+        attachment_data = jason_server.store._attachment_data.get(attachment_id)
+        if not attachment_data:
+            raise HTTPException(status_code=404, detail=f"Attachment {attachment_id} not found")
+        
+        return Response(
+            content=attachment_data["data"],
+            media_type=attachment_data["mime_type"],
+            headers={
+                "Content-Disposition": f'inline; filename="{attachment_data["name"]}"',
+                "Access-Control-Allow-Origin": "*",
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Get Attachment] ERROR: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve attachment: {str(e)}")
 
 
 @app.delete("/api/files/{file_id}")
