@@ -76,7 +76,9 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
       placeholder: COMPOSER_PLACEHOLDER,
       attachments: {
         enabled: true, // ✨ Enable image uploads for GPT-5 vision
-        accept: "image/*", // Only accept images
+        accept: {
+          "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp"] // Only accept images
+        },
       },
     },
     threadItemActions: {
