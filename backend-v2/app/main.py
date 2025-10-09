@@ -20,6 +20,11 @@ from chatkit.types import (
     ThreadStreamEvent,
     UserMessageItem,
 )
+try:
+    from chatkit.types import ProgressUpdateEvent
+except ImportError:
+    # Fallback if ProgressUpdateEvent doesn't exist
+    ProgressUpdateEvent = None
 from fastapi import Depends, FastAPI, Request, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
@@ -55,6 +60,27 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         self.assistant = agent
         # Cache SQLiteSession instances per thread
         self.sessions: dict[str, SQLiteSession] = {}
+        # Track active tools for progress visualization
+        self.active_tools: dict[str, str] = {}
+    
+    def _get_tool_progress_message(self, tool_name: str, status: str = "running") -> str:
+        """Convert tool name to user-friendly progress message."""
+        tool_messages = {
+            "file_search": {
+                "running": "Searching knowledge base...",
+                "completed": "Found relevant content"
+            },
+            "web_search": {
+                "running": "Searching the web...",
+                "completed": "Found latest information"
+            },
+        }
+        
+        if tool_name in tool_messages:
+            return tool_messages[tool_name].get(status, f"Using {tool_name}...")
+        
+        # Fallback for unknown tools
+        return f"Using {tool_name}..." if status == "running" else f"Completed {tool_name}"
     
     def _get_session(self, thread_id: str) -> SQLiteSession:
         """Get or create a SQLiteSession for this thread."""
@@ -119,7 +145,32 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 ),
             )
 
+            # Stream events with tool progress visualization
             async for event in stream_agent_response(agent_context, result):
+                # Log event for debugging (can be removed later)
+                event_type = type(event).__name__
+                print(f"[Event] {event_type}: {getattr(event, 'type', 'N/A')}")
+                
+                # Check if this is a tool-related event and log details
+                if hasattr(event, 'type'):
+                    event_type_str = str(getattr(event, 'type', ''))
+                    
+                    # Log tool usage for debugging
+                    if 'tool' in event_type_str.lower():
+                        print(f"[Tool Event] Type: {event_type_str}, Event: {event}")
+                        
+                        # Try to extract tool name if available
+                        tool_name = None
+                        if hasattr(event, 'name'):
+                            tool_name = event.name
+                        elif hasattr(event, 'tool_name'):
+                            tool_name = event.tool_name
+                        
+                        if tool_name:
+                            print(f"[Tool] Detected tool: {tool_name}")
+                
+                # ChatKit's stream_agent_response should automatically handle
+                # tool progress visualization. Just pass through all events.
                 yield event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
