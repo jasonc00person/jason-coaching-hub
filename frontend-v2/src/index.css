@@ -22,22 +22,31 @@
 
 html {
   height: 100%;
-  overflow: hidden;
-  position: fixed;
   width: 100%;
+  overflow: hidden;
 }
 
 body {
   margin: 0;
+  padding: 0;
   min-width: 320px;
   height: 100vh;
   height: 100dvh; /* Dynamic viewport height for mobile */
   background-color: #0f0f0f;
   overflow: hidden;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  position: fixed;
   width: 100%;
   touch-action: manipulation;
+  /* Safe area insets for mobile notches and toolbars */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 code {
@@ -65,4 +74,19 @@ code {
 /* Shadow utility for card */
 .shadow-card {
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+/* Safe area utilities for mobile */
+.safe-top {
+  top: max(1rem, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Prevent overscroll bounce on mobile */
+html, body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }

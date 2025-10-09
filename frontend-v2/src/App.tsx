@@ -10,7 +10,7 @@ function App() {
   }, []);
 
   return (
-    <div className="w-full h-screen bg-[#0f0f0f] relative">
+    <div className="w-full h-full bg-[#0f0f0f] flex flex-col">
       <ChatKitPanel theme={theme} />
     </div>
   );
