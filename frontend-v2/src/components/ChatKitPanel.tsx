@@ -24,7 +24,6 @@ const getOrCreateSessionId = (): string => {
 
 export function ChatKitPanel({ theme }: ChatKitPanelProps) {
   const [integrationError, setIntegrationError] = useState<string | null>(null);
-  const [isAgentTyping, setIsAgentTyping] = useState(false);
   const isMounted = useRef(true);
   // Get session ID immediately - don't wait for useEffect
   const sessionId = useRef(getOrCreateSessionId()).current;
@@ -85,13 +84,8 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
     onThreadChange: () => {
       console.log("[ChatKitPanel] Thread changed");
     },
-    onResponseStart: () => {
-      console.log("[ChatKitPanel] Response started");
-      setIsAgentTyping(true);
-    },
     onResponseEnd: (response) => {
       console.log("[ChatKitPanel] Response ended", response);
-      setIsAgentTyping(false);
     },
     onError: ({ error }) => {
       // Always log errors to console
@@ -159,17 +153,6 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
               </button>
             </div>
           </div>
-        </div>
-      )}
-      
-      {isAgentTyping && (
-        <div className="absolute bottom-20 left-4 bg-gray-800/90 text-gray-300 px-3 py-2 rounded-lg text-sm flex items-center gap-2 z-10 animate-in slide-in-from-left duration-300">
-          <div className="flex gap-1">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-          </div>
-          <span>Jason is thinking...</span>
         </div>
       )}
       
