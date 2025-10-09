@@ -56,16 +56,21 @@ class MemoryStore(Store[dict[str, Any]]):
         state = threads.get(thread_id)
         if not state:
             raise NotFoundError(f"Thread {thread_id} not found")
-        return state.thread.model_copy(deep=True)
+        # Exclude items field to prevent conflicts
+        thread_dict = state.thread.model_dump(exclude={'items'})
+        return ThreadMetadata(**thread_dict)
 
     async def save_thread(self, thread: ThreadMetadata, context: dict[str, Any]) -> None:
         threads = self._get_threads(context)
         state = threads.get(thread.id)
+        # Exclude items field to ensure ThreadMetadata doesn't contain it
+        thread_dict = thread.model_dump(exclude={'items'})
+        clean_thread = ThreadMetadata(**thread_dict)
         if state:
-            state.thread = thread.model_copy(deep=True)
+            state.thread = clean_thread
         else:
             threads[thread.id] = _ThreadState(
-                thread=thread.model_copy(deep=True),
+                thread=clean_thread,
                 items=[],
             )
 
@@ -77,8 +82,9 @@ class MemoryStore(Store[dict[str, Any]]):
         context: dict[str, Any],
     ) -> Page[ThreadMetadata]:
         session_threads = self._get_threads(context)
+        # Exclude items field from all threads
         threads = sorted(
-            (state.thread.model_copy(deep=True) for state in session_threads.values()),
+            (ThreadMetadata(**state.thread.model_dump(exclude={'items'})) for state in session_threads.values()),
             key=lambda t: t.created_at or datetime.min,
             reverse=(order == "desc"),
         )
