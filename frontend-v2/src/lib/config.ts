@@ -2,7 +2,10 @@ import { StartScreenPrompt } from "@openai/chatkit";
 
 export const THEME_STORAGE_KEY = "jason-coaching-theme";
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000/";
+// Use relative URLs in production (same domain on Vercel), localhost for dev
+const API_BASE = import.meta.env.VITE_API_BASE ?? (
+  import.meta.env.DEV ? "http://localhost:8000/" : "/api/"
+);
 
 export const CHATKIT_API_URL = import.meta.env.VITE_CHATKIT_API_URL ?? `${API_BASE}chatkit`;
 
@@ -15,10 +18,10 @@ export const CHATKIT_API_URL = import.meta.env.VITE_CHATKIT_API_URL ?? `${API_BA
 export const CHATKIT_API_DOMAIN_KEY =
   import.meta.env.VITE_CHATKIT_API_DOMAIN_KEY ?? "domain_pk_68e6f82c9e5081908d9b66e3fccbeed801c44e006ad5d8e7";
 
-// API Endpoints - use full URLs for production
-export const CREATE_SESSION_ENDPOINT = `${API_BASE}api/chatkit/session`;
-export const FILES_API_URL = `${API_BASE}api/files`;
-export const FILE_UPLOAD_URL = `${API_BASE}api/files/upload`;
+// API Endpoints - use relative URLs for Vercel (same domain)
+export const CREATE_SESSION_ENDPOINT = `${API_BASE}chatkit/session`;
+export const FILES_API_URL = `${API_BASE}files`;
+export const FILE_UPLOAD_URL = `${API_BASE}files/upload`;
 
 export const GREETING =
   import.meta.env.VITE_GREETING ??

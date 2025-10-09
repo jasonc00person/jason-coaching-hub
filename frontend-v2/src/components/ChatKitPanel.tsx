@@ -14,15 +14,32 @@ type ChatKitPanelProps = {
 
 export function ChatKitPanel({ theme }: ChatKitPanelProps) {
   const [integrationError, setIntegrationError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string>("");
   const isMounted = useRef(true);
 
   useEffect(() => {
     isMounted.current = true;
+    
+    // Get or create a session ID that persists only for this browser session
+    let sid = sessionStorage.getItem('chatSessionId');
+    if (!sid) {
+      sid = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionStorage.setItem('chatSessionId', sid);
+      if (import.meta.env.DEV) {
+        console.log("[ChatKitPanel] Created new session ID:", sid);
+      }
+    } else {
+      if (import.meta.env.DEV) {
+        console.log("[ChatKitPanel] Using existing session ID:", sid);
+      }
+    }
+    setSessionId(sid);
+    
     if (import.meta.env.DEV) {
       console.log("[ChatKitPanel] Component mounted");
       console.log("[ChatKitPanel] API URL:", CHATKIT_API_URL);
       console.log("[ChatKitPanel] Domain Key:", CHATKIT_API_DOMAIN_KEY);
-      console.log("[ChatKitPanel] Session-based chat - history disabled");
+      console.log("[ChatKitPanel] Session-based chat - history cleared on refresh");
     }
     return () => {
       isMounted.current = false;
@@ -31,8 +48,8 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
 
   const chatkit = useChatKit({
     api: { 
-      url: CHATKIT_API_URL, 
-      domainKey: CHATKIT_API_DOMAIN_KEY 
+      url: sessionId ? `${CHATKIT_API_URL}?sid=${sessionId}` : CHATKIT_API_URL, 
+      domainKey: CHATKIT_API_DOMAIN_KEY
     },
     theme: {
       colorScheme: theme,

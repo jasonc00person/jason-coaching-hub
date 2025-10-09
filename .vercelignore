@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+
+# Backend folders (we're using api/ instead)
+backend/
+backend-v2/
+
+# Node
+node_modules/
+
+# Git
+.git/
+
+# Environment
+.env
+.env.local
+
+# Other
+.DS_Store
+*.log
+
