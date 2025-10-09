@@ -110,19 +110,6 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
 
   return (
     <div className="flex-1 relative w-full overflow-hidden bg-[#0f0f0f]" style={{ minHeight: 0 }}>
-      {/* Debug panel - remove this after fixing */}
-      <div className="absolute top-4 right-4 z-50 bg-gray-900/95 border border-gray-700 rounded-lg p-4 max-w-md text-xs font-mono">
-        <div className="text-green-400 font-bold mb-2">🐛 Debug Info</div>
-        <div className="text-gray-300 space-y-1">
-          <div>Control: {chatkit.control ? '✅ YES' : '❌ NO'}</div>
-          <div>Domain Key: {CHATKIT_API_DOMAIN_KEY ? '✅ Set' : '❌ Missing'}</div>
-          <div>API URL: {CHATKIT_API_URL ? '✅ Set' : '❌ Missing'}</div>
-          <div>Session: {sessionId.substring(0, 20)}...</div>
-          <div>Error: {integrationError || 'None'}</div>
-          <div className="text-yellow-400 mt-2">Check console for full logs</div>
-        </div>
-      </div>
-
       {integrationError && (
         <div className="absolute top-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-20 sm:max-w-md safe-top">
           <div className="bg-red-900/95 backdrop-blur-sm border border-red-700/50 rounded-xl p-4 shadow-2xl">
@@ -178,7 +165,6 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
           <div className="flex flex-col items-center gap-3">
             <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-blue-500 animate-spin" />
             <div className="text-gray-400 text-sm">Loading ChatKit...</div>
-            <div className="text-gray-500 text-xs">Check debug panel (top-right) and console</div>
           </div>
         </div>
       )}
