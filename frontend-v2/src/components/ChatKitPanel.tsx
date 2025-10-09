@@ -51,24 +51,7 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
   const chatkit = useChatKit({
     api: { 
       url: `${CHATKIT_API_URL}?sid=${sessionId}`, 
-      domainKey: CHATKIT_API_DOMAIN_KEY,
-      uploadStrategy: async (file) => {
-        // Upload file to ChatKit backend
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const response = await fetch(`${CHATKIT_API_URL}?sid=${sessionId}`, {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (!response.ok) {
-          throw new Error('Upload failed');
-        }
-        
-        const data = await response.json();
-        return data;
-      }
+      domainKey: CHATKIT_API_DOMAIN_KEY
     },
     theme: {
       colorScheme: theme,
@@ -92,10 +75,7 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
     composer: {
       placeholder: COMPOSER_PLACEHOLDER,
       attachments: {
-        enabled: true, // ✨ Enable image uploads for GPT-5 vision
-        accept: {
-          "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp"] // Only accept images
-        },
+        enabled: false, // Disabled for now - requires proper ChatKit uploadStrategy types
       },
     },
     threadItemActions: {
