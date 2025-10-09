@@ -7,6 +7,12 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? (
   import.meta.env.DEV ? "http://localhost:8000/" : "https://jason-coaching-backend-production.up.railway.app/"
 );
 
+console.log("=== CONFIG.TS LOADED ===");
+console.log("import.meta.env:", import.meta.env);
+console.log("VITE_API_BASE:", import.meta.env.VITE_API_BASE);
+console.log("VITE_CHATKIT_API_DOMAIN_KEY:", import.meta.env.VITE_CHATKIT_API_DOMAIN_KEY);
+console.log("Computed API_BASE:", API_BASE);
+
 export const CHATKIT_API_URL = import.meta.env.VITE_CHATKIT_API_URL ?? `${API_BASE}chatkit`;
 
 /**
@@ -17,6 +23,9 @@ export const CHATKIT_API_URL = import.meta.env.VITE_CHATKIT_API_URL ?? `${API_BA
  */
 export const CHATKIT_API_DOMAIN_KEY =
   import.meta.env.VITE_CHATKIT_API_DOMAIN_KEY ?? "domain_pk_68e6f82c9e5081908d9b66e3fccbeed801c44e006ad5d8e7";
+
+console.log("CHATKIT_API_DOMAIN_KEY:", CHATKIT_API_DOMAIN_KEY);
+console.log("CHATKIT_API_URL:", CHATKIT_API_URL);
 
 // API Endpoints - use Railway backend
 export const CREATE_SESSION_ENDPOINT = `${API_BASE}api/chatkit/session`;
