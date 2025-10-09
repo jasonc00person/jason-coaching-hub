@@ -52,10 +52,28 @@ def _user_message_text(item: UserMessageItem) -> str:
 def _get_attachment_refs(item: UserMessageItem) -> list[str]:
     """Extract attachment IDs from user message content."""
     attachment_ids: list[str] = []
-    for part in item.content:
-        # Check if this content part is an attachment reference
+    print(f"[_get_attachment_refs] Processing {len(item.content)} content parts")
+    for i, part in enumerate(item.content):
+        print(f"[_get_attachment_refs] Part {i}: type={type(part).__name__}, attrs={dir(part)}")
+        print(f"[_get_attachment_refs] Part {i} content: {part}")
+        
+        # Check for different possible attachment reference formats
         if hasattr(part, "attachment_id") and part.attachment_id:
+            print(f"[_get_attachment_refs] Found attachment_id: {part.attachment_id}")
             attachment_ids.append(part.attachment_id)
+        elif hasattr(part, "attachment") and part.attachment:
+            print(f"[_get_attachment_refs] Found attachment object: {part.attachment}")
+            if hasattr(part.attachment, "id"):
+                attachment_ids.append(part.attachment.id)
+        elif hasattr(part, "type") and part.type in ["image", "file", "attachment"]:
+            print(f"[_get_attachment_refs] Found {part.type} type part")
+            # Try to extract ID from various possible attributes
+            for attr in ["id", "file_id", "image_id", "attachment_id"]:
+                if hasattr(part, attr) and getattr(part, attr):
+                    attachment_ids.append(getattr(part, attr))
+                    break
+    
+    print(f"[_get_attachment_refs] Total found: {attachment_ids}")
     return attachment_ids
 
 
