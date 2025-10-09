@@ -413,17 +413,13 @@ async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
         
         print(f"[Upload] Stored attachment: {attachment_id}")
         
-        # Get base URL from environment or construct it
-        api_base = os.getenv("API_BASE_URL", "https://jason-coaching-backend-production.up.railway.app")
-        attachment_url = f"{api_base}/api/files/attachment/{attachment_id}"
-        
-        # Return format ChatKit expects for direct upload
+        # Return format that ChatKit expects for direct upload
+        # Must match the Attachment type structure exactly
         response_data = {
             "id": attachment_id,
             "name": file.filename or "unnamed",
-            "size": len(content),
             "mimeType": file.content_type or "application/octet-stream",
-            "url": attachment_url,  # Include URL for retrieval
+            "size": len(content),
         }
         
         print(f"[Upload] Returning response: {response_data}")
