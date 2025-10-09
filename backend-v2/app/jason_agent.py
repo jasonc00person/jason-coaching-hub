@@ -112,7 +112,7 @@ def build_web_search_tool() -> WebSearchTool:
 
 
 jason_agent = Agent[AgentContext](
-    model="gpt-4o-mini",  # 🔥 33x cheaper + 2x faster than gpt-4o
+    model="gpt-5",  # 🔥 Latest flagship model with built-in chain-of-thought reasoning
     name="Jason Cooperson - Social Media Marketing Expert",
     instructions=JASON_INSTRUCTIONS,
     tools=[build_file_search_tool(), build_web_search_tool()],  # ✨ Enhanced tools
