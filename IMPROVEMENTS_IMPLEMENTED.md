@@ -54,46 +54,19 @@ run_config=RunConfig(
 
 ---
 
-### 3. 👁️ Typing Indicator UI
+### 3. ~~👁️ Typing Indicator UI~~ (Removed - Redundant)
 
-**File**: `frontend-v2/src/components/ChatKitPanel.tsx`
+**Status**: ❌ **REMOVED** - ChatKit handles typing indicators natively
 
-**Impact**:
-- ✅ Users see "Jason is thinking..." while agent responds
-- 🎨 Animated bouncing dots for visual feedback
-- 📱 Better UX - no more wondering if it's working
+**Original Implementation**: Added custom typing indicator  
+**Correction**: Removed in commit `0476736` - ChatKit already provides built-in typing indicators
 
-**Code Changes**:
-1. Added state management (line 27):
-```typescript
-const [isAgentTyping, setIsAgentTyping] = useState(false);
-```
+**Why Removed**:
+- ChatKit has native typing indicator functionality
+- Custom implementation was redundant
+- Native ChatKit indicators are more performant and integrated
 
-2. Added response handlers (lines 88-95):
-```typescript
-onResponseStart: () => {
-  console.log("[ChatKitPanel] Response started");
-  setIsAgentTyping(true);
-},
-onResponseEnd: (response) => {
-  console.log("[ChatKitPanel] Response ended", response);
-  setIsAgentTyping(false);
-},
-```
-
-3. Added UI indicator (lines 165-174):
-```typescript
-{isAgentTyping && (
-  <div className="absolute bottom-20 left-4 bg-gray-800/90 text-gray-300 px-3 py-2 rounded-lg text-sm flex items-center gap-2 z-10">
-    <div className="flex gap-1">
-      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-    </div>
-    <span>Jason is thinking...</span>
-  </div>
-)}
-```
+**Current State**: App uses ChatKit's native typing indicators (no custom code needed)
 
 ---
 
@@ -104,7 +77,6 @@ onResponseEnd: (response) => {
 | **Cost per 1M input tokens** | ~$5.00 | $0.15 | 💰 **33x cheaper** |
 | **Response speed** | ~88 tok/s | 182 tok/s | ⚡ **2x faster** |
 | **Multi-tool queries** | Sequential | Parallel | ⚡ **3-5x faster** |
-| **User feedback** | None | Typing indicator | ✅ **Better UX** |
 | **Estimated monthly savings** | - | - | 💰 **$100s-$1000s** |
 
 ---
