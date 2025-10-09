@@ -231,8 +231,6 @@ Avoid formal intros like "Hello, today I will explain…" — always jump straig
 def build_file_search_tool() -> FileSearchTool:
     """
     Enhanced file search with better result quality.
-    - include_search_results: Get raw search results for better context
-    - ranking_options: Filter low-quality results with score threshold
     """
     if not JASON_VECTOR_STORE_ID:
         raise RuntimeError(
@@ -241,11 +239,6 @@ def build_file_search_tool() -> FileSearchTool:
     return FileSearchTool(
         vector_store_ids=[JASON_VECTOR_STORE_ID],
         max_num_results=10,
-        include_search_results=True,  # ✨ Get raw search results
-        ranking_options={              # ✨ Control ranking quality
-            "ranker": "auto",
-            "score_threshold": 0.5,   # Filter low-quality results
-        }
     )
 
 
@@ -258,8 +251,7 @@ def build_web_search_tool() -> WebSearchTool:
             "type": "approximate",
             "city": "Miami",           # Jason's location
             "country": "US"
-        },
-        max_results=5,                 # ✨ Limit results
+        }
     )
 
 
