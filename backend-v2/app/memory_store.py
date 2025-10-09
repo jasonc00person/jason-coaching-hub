@@ -7,6 +7,8 @@ from typing import Any
 from chatkit.store import NotFoundError, Store
 from chatkit.types import (
     Attachment,
+    FileAttachment,
+    ImageAttachment,
     Page,
     ThreadItem,
     ThreadMetadata,
@@ -178,7 +180,7 @@ class MemoryStore(Store[dict[str, Any]]):
     # -- Files -----------------------------------------------------------
     async def create_attachment(
         self, input: Any, context: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Attachment:
         """
         Phase 1: Create attachment metadata and return upload URL.
         ChatKit will call this, then use the upload_url to send file bytes.
@@ -207,18 +209,27 @@ class MemoryStore(Store[dict[str, Any]]):
         # ChatKit will POST the file bytes to this URL
         upload_url = f"/upload/{attachment_id}"
         
-        # Return attachment object with upload_url
-        response = {
-            "id": attachment_id,
-            "name": input.name or "unnamed",
-            "mimeType": input.mime_type or "application/octet-stream",
-            "size": 0,
-            "upload_url": upload_url,  # Phase 2 will POST bytes here
-        }
+        # Return proper Pydantic model based on MIME type
+        if input.mime_type and input.mime_type.startswith("image/"):
+            attachment = ImageAttachment(
+                id=attachment_id,
+                name=input.name or "unnamed",
+                mime_type=input.mime_type,
+                size_bytes=0,
+                upload_url=upload_url,
+            )
+        else:
+            attachment = FileAttachment(
+                id=attachment_id,
+                name=input.name or "unnamed",
+                mime_type=input.mime_type or "application/octet-stream",
+                size_bytes=0,
+                upload_url=upload_url,
+            )
         
-        print(f"[Phase 1 Create] Returning attachment with upload_url: {upload_url}")
+        print(f"[Phase 1 Create] Returning {type(attachment).__name__} with upload_url: {upload_url}")
         
-        return response
+        return attachment
     
     async def save_attachment(
         self,
