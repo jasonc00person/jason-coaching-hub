@@ -22,17 +22,17 @@ export const FILE_UPLOAD_URL = `${API_BASE}api/files/upload`;
 
 export const GREETING =
   import.meta.env.VITE_GREETING ??
-  "Hey! I'm Jason's AI coach. I have access to all of Jason's proven templates, frameworks, and strategies. Ask me about hooks, scripts, offers, or growth strategy!";
+  "What can I help you create today?";
 
 export const STARTER_PROMPTS: StartScreenPrompt[] = [
   {
     label: "Hook Templates",
-    prompt: "Show me some of your best hook templates",
+    prompt: "Show me your best hook templates",
     icon: "sparkle",
   },
   {
     label: "Content Strategy",
-    prompt: "Help me create a 30-day content plan for TikTok",
+    prompt: "Help me create a 30-day content plan",
     icon: "calendar",
   },
   {
@@ -49,4 +49,4 @@ export const STARTER_PROMPTS: StartScreenPrompt[] = [
 
 export const COMPOSER_PLACEHOLDER =
   import.meta.env.VITE_COMPOSER_PLACEHOLDER ??
-  "Ask me about hooks, scripts, offers, or growth strategy...";
+  "What do you want to know?";
