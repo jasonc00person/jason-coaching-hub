@@ -136,13 +136,6 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         if not message_text:
             return
 
-        # Show "Thinking..." status immediately to replace default loading dots
-        if ProgressUpdateEvent is not None:
-            try:
-                yield ProgressUpdateEvent(text="🤔 Thinking...")
-            except Exception as e:
-                print(f"⚠️  Failed to emit initial thinking status: {e}")
-
         # Auto-generate thread title from first user message if not set
         if not thread.title:
             thread.title = self.store._generate_title_from_message(message_text)
@@ -189,8 +182,21 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 from agents import ItemHelpers
                 import uuid
                 
+                # Emit initial thinking status before processing events
+                thinking_emitted = False
+                
                 async for event in result.stream_events():
                     event_type = event.type
+                    
+                    # Emit "Thinking..." on first event to replace default 3-dot animation
+                    if not thinking_emitted and ProgressUpdateEvent is not None:
+                        try:
+                            await agent_context.stream(ProgressUpdateEvent(text="🤔 Thinking..."))
+                            print("🤔 Streamed initial thinking status to ChatKit")
+                            thinking_emitted = True
+                        except Exception as e:
+                            print(f"⚠️  Failed to emit initial thinking status: {e}")
+                            thinking_emitted = True  # Don't try again
                     
                     # Detect tool calls and emit progress updates
                     if event_type == "run_item_stream_event":
