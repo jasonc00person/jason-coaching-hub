@@ -63,23 +63,49 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         # Track active tools for progress visualization
         self.active_tools: dict[str, str] = {}
     
-    def _get_tool_progress_message(self, tool_name: str, status: str = "running") -> str:
-        """Convert tool name to user-friendly progress message with icons."""
+    def _get_tool_progress_message(
+        self, 
+        tool_name: str, 
+        status: str = "running",
+        queries: list[str] | None = None
+    ) -> str:
+        """Convert tool name to user-friendly progress message with icons and query details."""
+        
+        # Extract first query if available
+        query_text = None
+        if queries and len(queries) > 0:
+            # queries is typically a list like ['search term']
+            query_text = queries[0] if isinstance(queries, list) else str(queries)
+            # Truncate long queries
+            if len(query_text) > 60:
+                query_text = query_text[:60] + "..."
+        
+        # Base messages
         tool_messages = {
             "file_search": {
-                "running": "🔍 Searching knowledge base...",
-                "completed": "✅ Found relevant content"
+                "running": "🔍 Searching knowledge base",
+                "completed": "✅ Found relevant content",
+                "analyzing": "🤔 Analyzing search results"
             },
             "web_search": {
-                "running": "🌐 Searching the web...",
-                "completed": "✅ Found latest information"
+                "running": "🌐 Searching the web",
+                "completed": "✅ Found latest information",
+                "analyzing": "🤔 Analyzing web results"
             },
         }
         
         if tool_name in tool_messages:
-            return tool_messages[tool_name].get(status, f"🔧 Using {tool_name}...")
+            base_msg = tool_messages[tool_name].get(status, f"🔧 Using {tool_name}")
+            
+            # Add query details if running and query available
+            if status == "running" and query_text:
+                return f"{base_msg} for: \"{query_text}\""
+            
+            return base_msg + "..."
         
         # Fallback for unknown tools
+        if status == "running" and query_text:
+            return f"🔧 Using {tool_name} with query: \"{query_text}\""
         return f"🔧 Using {tool_name}..." if status == "running" else f"✅ Completed {tool_name}"
     
     def _get_session(self, thread_id: str) -> SQLiteSession:
@@ -178,8 +204,12 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                             if queries:
                                 print(f"   Queries: {queries}")
                             
-                            # Get user-friendly message
-                            friendly_msg = self._get_tool_progress_message(tool_name, "running")
+                            # Get user-friendly message with query details
+                            friendly_msg = self._get_tool_progress_message(
+                                tool_name, 
+                                "running",
+                                queries=queries
+                            )
                             print(f"[Progress] {friendly_msg}")
                             
                             # Emit ChatKit progress update if available
@@ -195,7 +225,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                                     print(f"⚠️  Failed to stream progress update: {e}")
                             
                         elif event.name == "tool_output":
-                            # Tool completed - emit completion message
+                            # Tool completed - emit completion and analyzing messages
                             raw_tool_type = getattr(event.item.raw_item, 'type', 'unknown_tool_call')
                             tool_name = raw_tool_type.replace('_call', '').replace('_output', '')
                             
@@ -203,20 +233,33 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                             output_preview = str(output)[:200] if output else 'No output'
                             print(f"✅ Tool Output: {output_preview}...")
                             
-                            # Emit completion progress message
+                            # Emit completion and analyzing progress messages
                             if ProgressUpdateEvent is not None:
                                 try:
+                                    # First: Show completion
                                     completion_msg = self._get_tool_progress_message(tool_name, "completed")
-                                    progress_event = ProgressUpdateEvent(
-                                        text=completion_msg
-                                    )
-                                    await agent_context.stream(progress_event)
+                                    await agent_context.stream(ProgressUpdateEvent(text=completion_msg))
                                     print(f"✅ Streamed completion update to ChatKit: {completion_msg}")
+                                    
+                                    # Then: Show analyzing
+                                    analyzing_msg = self._get_tool_progress_message(tool_name, "analyzing")
+                                    await agent_context.stream(ProgressUpdateEvent(text=analyzing_msg))
+                                    print(f"🤔 Streamed analyzing update to ChatKit: {analyzing_msg}")
                                 except Exception as e:
-                                    print(f"⚠️  Failed to stream completion update: {e}")
+                                    print(f"⚠️  Failed to stream tool output updates: {e}")
                             
                         elif event.name == "message_output_created":
+                            # Agent starting to write response
                             try:
+                                # Show "crafting response" indicator
+                                if ProgressUpdateEvent is not None:
+                                    try:
+                                        crafting_msg = "✍️ Crafting response..."
+                                        await agent_context.stream(ProgressUpdateEvent(text=crafting_msg))
+                                        print(f"✍️  Streamed crafting update to ChatKit")
+                                    except Exception as e:
+                                        print(f"⚠️  Failed to stream crafting update: {e}")
+                                
                                 msg = ItemHelpers.text_message_output(event.item)
                                 print(f"💬 Message: {msg[:100]}...")
                             except Exception as e:
