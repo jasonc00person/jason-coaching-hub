@@ -49,6 +49,16 @@ def _user_message_text(item: UserMessageItem) -> str:
     return " ".join(parts).strip()
 
 
+def _get_attachment_refs(item: UserMessageItem) -> list[str]:
+    """Extract attachment IDs from user message content."""
+    attachment_ids: list[str] = []
+    for part in item.content:
+        # Check if this content part is an attachment reference
+        if hasattr(part, "attachment_id") and part.attachment_id:
+            attachment_ids.append(part.attachment_id)
+    return attachment_ids
+
+
 def _is_tool_completion_item(item: Any) -> bool:
     return isinstance(item, ClientToolCallItem)
 
@@ -134,11 +144,46 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             return
 
         message_text = _user_message_text(item)
-        if not message_text:
+        attachment_ids = _get_attachment_refs(item)
+        
+        print(f"[respond] Message text: '{message_text[:50]}...'" if message_text else "[respond] No text")
+        print(f"[respond] Found {len(attachment_ids)} attachment(s): {attachment_ids}")
+        
+        # Build input content - either string or list of content parts
+        if attachment_ids:
+            # Build multi-part input with text and attachments
+            input_content = []
+            
+            # Add text if present
+            if message_text:
+                input_content.append({"type": "text", "text": message_text})
+            
+            # Convert and add each attachment
+            for attachment_id in attachment_ids:
+                try:
+                    # Load the attachment metadata
+                    attachment = await self.store.load_attachment(attachment_id, context)
+                    print(f"[respond] Loaded attachment {attachment_id}: {attachment.name}")
+                    
+                    # Convert to Agent SDK format
+                    attachment_content = await self.to_message_content(attachment)
+                    input_content.append(attachment_content)
+                    print(f"[respond] Converted attachment {attachment_id} to agent format")
+                except Exception as e:
+                    print(f"[respond] ERROR processing attachment {attachment_id}: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            agent_input = input_content
+        else:
+            # Just text, no attachments
+            agent_input = message_text
+            
+        if not message_text and not attachment_ids:
             return
 
         # Auto-generate thread title from first user message if not set
-        if not thread.title:
+        if not thread.title and message_text:
             thread.title = self.store._generate_title_from_message(message_text)
             await self.store.save_thread(thread, context)
 
@@ -146,9 +191,9 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         session = self._get_session(thread.id)
         
         # 🎯 Smart routing: Use GPT-5 Mini for simple queries, GPT-5 for complex ones
-        selected_agent = select_agent_for_query(message_text)
+        selected_agent = select_agent_for_query(message_text or "image analysis")
         model_name = "GPT-5" if selected_agent.model == "gpt-5" else "GPT-5 Mini"
-        print(f"[Routing] Using {model_name} for query: '{message_text[:50]}...'")
+        print(f"[Routing] Using {model_name} for query: '{message_text[:50] if message_text else 'image/file'}...'")
 
         agent_context = AgentContext(
             thread=thread,
@@ -169,7 +214,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         with trace(f"Jason coaching - {thread.id[:8]}"):
             result = Runner.run_streamed(
                 selected_agent,  # 🎯 Dynamically selected agent
-                message_text,
+                agent_input,  # 🖼️ Now includes attachments!
                 context=agent_context,
                 session=session,  # ✨ Native session support for agent memory
                 run_config=RunConfig(
