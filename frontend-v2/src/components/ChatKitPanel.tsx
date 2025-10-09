@@ -81,6 +81,133 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
     threadItemActions: {
       feedback: false,
     },
+    // 🎨 Widgets: Handle interactive cards, forms, and lists
+    widgets: {
+      async onAction(action, widgetItem) {
+        console.log("[ChatKit] Widget action triggered:", action, widgetItem);
+        
+        // Forward widget actions to backend
+        try {
+          await fetch(`${CHATKIT_API_URL.replace('/chatkit', '')}/api/widget-action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              action, 
+              widgetItemId: widgetItem.id,
+              sessionId 
+            }),
+          });
+        } catch (error) {
+          console.error("[ChatKit] Failed to handle widget action:", error);
+        }
+      },
+    },
+    // 🏷️ Entity tagging: @mentions with autocomplete
+    entities: {
+      async onTagSearch(query) {
+        console.log("[ChatKit] Entity search:", query);
+        
+        // Return sample entities - you can customize this to search your own data
+        const allEntities = [
+          { id: "content_strategy", title: "Content Strategy", group: "Topics", interactive: true },
+          { id: "viral_hooks", title: "Viral Hooks", group: "Topics", interactive: true },
+          { id: "monetization", title: "Monetization", group: "Topics", interactive: true },
+          { id: "instagram", title: "Instagram Growth", group: "Platforms", interactive: true },
+          { id: "tiktok", title: "TikTok Strategy", group: "Platforms", interactive: true },
+          { id: "youtube", title: "YouTube Shorts", group: "Platforms", interactive: true },
+        ];
+        
+        // Filter based on query
+        if (!query) return allEntities;
+        
+        const lowerQuery = query.toLowerCase();
+        return allEntities.filter(
+          e => e.title.toLowerCase().includes(lowerQuery) || 
+               e.group.toLowerCase().includes(lowerQuery)
+        );
+      },
+      onClick(entity) {
+        console.log("[ChatKit] Entity clicked:", entity);
+        // You can trigger navigation, open modals, etc.
+      },
+      async onRequestPreview(entity) {
+        console.log("[ChatKit] Entity preview requested:", entity);
+        
+        // Return a widget preview for hover tooltip (must be BasicRoot type)
+        return {
+          preview: {
+            type: "Basic",
+            direction: "col",
+            gap: 8,
+            padding: 12,
+            children: [
+              { 
+                type: "Title", 
+                value: entity.title, 
+                size: "sm" 
+              },
+              { 
+                type: "Caption", 
+                value: `Category: ${entity.group}`,
+                color: "secondary" 
+              },
+              {
+                type: "Divider",
+                spacing: 8
+              },
+              {
+                type: "Text",
+                value: "Click to learn more about this topic",
+                size: "sm",
+                color: "secondary"
+              }
+            ],
+          },
+        };
+      },
+    },
+    // 🔧 Client tools: Agent triggers frontend-only actions
+    async onClientTool(toolCall) {
+      console.log("[ChatKit] Client tool called:", toolCall);
+      
+      // Handle client-side tool calls from the agent
+      try {
+        switch (toolCall.name) {
+          case "open_link":
+            // Example: Open a URL
+            if (toolCall.params.url) {
+              window.open(toolCall.params.url as string, '_blank');
+              return { success: true, opened: toolCall.params.url };
+            }
+            break;
+            
+          case "copy_to_clipboard":
+            // Example: Copy text to clipboard
+            if (toolCall.params.text) {
+              await navigator.clipboard.writeText(toolCall.params.text as string);
+              return { success: true, copied: true };
+            }
+            break;
+            
+          case "show_notification":
+            // Example: Show browser notification
+            if (toolCall.params.message) {
+              alert(toolCall.params.message); // You could use a toast library here
+              return { success: true };
+            }
+            break;
+            
+          default:
+            console.warn(`[ChatKit] Unknown client tool: ${toolCall.name}`);
+            return { success: false, error: "Unknown tool" };
+        }
+      } catch (error) {
+        console.error(`[ChatKit] Client tool error:`, error);
+        return { success: false, error: String(error) };
+      }
+      
+      return { success: false, error: "No action taken" };
+    },
     onThreadChange: () => {
       console.log("[ChatKitPanel] Thread changed");
     },

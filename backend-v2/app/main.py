@@ -207,8 +207,18 @@ async def root() -> dict[str, Any]:
             "Smart model routing",
             "Extended context (400k tokens)",
             "Reasoning control",
-            "Parallel tool calls"
+            "Parallel tool calls",
+            "Interactive widgets (cards, forms, lists)",
+            "Entity tagging (@mentions)",
+            "Client tools (frontend actions)"
         ],
+        "chatkit_features": {
+            "widgets": "Interactive UI components (cards, forms, lists) with actions",
+            "entities": "Entity tagging with @mentions, autocomplete, and rich previews",
+            "client_tools": "Frontend-only tool calls (open links, copy to clipboard, etc.)",
+            "history": "Multi-thread conversation management",
+            "theming": "Customizable dark/light themes with brand colors"
+        },
         "endpoints": {
             "chatkit": "/chatkit",
             "session": "/api/chatkit/session",
@@ -221,6 +231,9 @@ async def root() -> dict[str, Any]:
             "voice": {
                 "transcribe": "POST /api/voice/transcribe",
                 "speak": "POST /api/voice/speak"
+            },
+            "widgets": {
+                "action": "POST /api/widget-action"
             }
         },
     }
@@ -434,3 +447,40 @@ async def text_to_speech(request: Request) -> Response:
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate speech: {str(e)}")
+
+
+@app.post("/api/widget-action")
+async def handle_widget_action(request: Request) -> dict[str, str]:
+    """
+    Handle widget action events from ChatKit frontend.
+    This is called when users interact with widgets (buttons, forms, etc.)
+    """
+    try:
+        body = await request.json()
+        action = body.get("action", {})
+        widget_item_id = body.get("widgetItemId")
+        session_id = body.get("sessionId")
+        
+        print(f"[Widget Action] Session: {session_id}, Widget: {widget_item_id}")
+        print(f"[Widget Action] Action type: {action.get('type')}")
+        print(f"[Widget Action] Payload: {action.get('payload')}")
+        
+        # Handle different action types
+        action_type = action.get("type")
+        
+        if action_type == "example":
+            # Example action handler
+            return {"status": "success", "message": "Example action handled"}
+        
+        # Add more action handlers as needed
+        # You can store data, trigger workflows, update databases, etc.
+        
+        return {
+            "status": "received",
+            "action_type": action_type,
+            "message": "Widget action received"
+        }
+        
+    except Exception as e:
+        print(f"[Widget Action] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to handle widget action: {str(e)}")
