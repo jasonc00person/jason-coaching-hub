@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from agents import RunConfig, Runner, SQLiteSession, trace
+
+# Performance optimization: disable debug logging in production
+DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
 from agents.model_settings import ModelSettings
 from chatkit.agents import AgentContext, stream_agent_response
 from chatkit.server import ChatKitServer, StreamingResult
@@ -52,28 +55,34 @@ def _user_message_text(item: UserMessageItem) -> str:
 def _get_attachment_refs(item: UserMessageItem) -> list[str]:
     """Extract attachment IDs from user message content."""
     attachment_ids: list[str] = []
-    print(f"[_get_attachment_refs] Processing {len(item.content)} content parts")
+    if DEBUG_MODE:
+        print(f"[_get_attachment_refs] Processing {len(item.content)} content parts")
     for i, part in enumerate(item.content):
-        print(f"[_get_attachment_refs] Part {i}: type={type(part).__name__}, attrs={dir(part)}")
-        print(f"[_get_attachment_refs] Part {i} content: {part}")
+        if DEBUG_MODE:
+            print(f"[_get_attachment_refs] Part {i}: type={type(part).__name__}, attrs={dir(part)}")
+            print(f"[_get_attachment_refs] Part {i} content: {part}")
         
         # Check for different possible attachment reference formats
         if hasattr(part, "attachment_id") and part.attachment_id:
-            print(f"[_get_attachment_refs] Found attachment_id: {part.attachment_id}")
+            if DEBUG_MODE:
+                print(f"[_get_attachment_refs] Found attachment_id: {part.attachment_id}")
             attachment_ids.append(part.attachment_id)
         elif hasattr(part, "attachment") and part.attachment:
-            print(f"[_get_attachment_refs] Found attachment object: {part.attachment}")
+            if DEBUG_MODE:
+                print(f"[_get_attachment_refs] Found attachment object: {part.attachment}")
             if hasattr(part.attachment, "id"):
                 attachment_ids.append(part.attachment.id)
         elif hasattr(part, "type") and part.type in ["image", "file", "attachment"]:
-            print(f"[_get_attachment_refs] Found {part.type} type part")
+            if DEBUG_MODE:
+                print(f"[_get_attachment_refs] Found {part.type} type part")
             # Try to extract ID from various possible attributes
             for attr in ["id", "file_id", "image_id", "attachment_id"]:
                 if hasattr(part, attr) and getattr(part, attr):
                     attachment_ids.append(getattr(part, attr))
                     break
     
-    print(f"[_get_attachment_refs] Total found: {attachment_ids}")
+    if DEBUG_MODE:
+        print(f"[_get_attachment_refs] Total found: {attachment_ids}")
     return attachment_ids
 
 
@@ -161,16 +170,18 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         if not isinstance(item, UserMessageItem):
             return
 
-        # Debug: Print the entire item structure
-        print(f"[respond] UserMessageItem attributes: {dir(item)}")
-        print(f"[respond] UserMessageItem data: {item}")
+        # Debug: Print the entire item structure (only in debug mode)
+        if DEBUG_MODE:
+            print(f"[respond] UserMessageItem attributes: {dir(item)}")
+            print(f"[respond] UserMessageItem data: {item}")
         
         message_text = _user_message_text(item)
         
         # Check for attachments at the item level (not just in content)
         attachment_ids = []
         if hasattr(item, "attachments") and item.attachments:
-            print(f"[respond] Found item.attachments: {item.attachments}")
+            if DEBUG_MODE:
+                print(f"[respond] Found item.attachments: {item.attachments}")
             for att in item.attachments:
                 if hasattr(att, "id"):
                     attachment_ids.append(att.id)
@@ -181,8 +192,9 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         content_attachment_ids = _get_attachment_refs(item)
         attachment_ids.extend(content_attachment_ids)
         
-        print(f"[respond] Message text: '{message_text[:50]}...'" if message_text else "[respond] No text")
-        print(f"[respond] Found {len(attachment_ids)} attachment(s): {attachment_ids}")
+        if DEBUG_MODE:
+            print(f"[respond] Message text: '{message_text[:50]}...'" if message_text else "[respond] No text")
+            print(f"[respond] Found {len(attachment_ids)} attachment(s): {attachment_ids}")
         
         # Build input content - either string or list with message wrapper
         if attachment_ids:
@@ -198,16 +210,19 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 try:
                     # Load the attachment metadata
                     attachment = await self.store.load_attachment(attachment_id, context)
-                    print(f"[respond] Loaded attachment {attachment_id}: {attachment.name}")
+                    if DEBUG_MODE:
+                        print(f"[respond] Loaded attachment {attachment_id}: {attachment.name}")
                     
                     # Convert to Agent SDK format
                     attachment_content = await self.to_message_content(attachment)
                     message_content.append(attachment_content)
-                    print(f"[respond] Converted attachment {attachment_id} to agent format")
+                    if DEBUG_MODE:
+                        print(f"[respond] Converted attachment {attachment_id} to agent format")
                 except Exception as e:
                     print(f"[respond] ERROR processing attachment {attachment_id}: {e}")
-                    import traceback
-                    traceback.print_exc()
+                    if DEBUG_MODE:
+                        import traceback
+                        traceback.print_exc()
             
             # Wrap in a message format for Responses API
             agent_input = [
@@ -233,7 +248,8 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         session = self._get_session(thread.id)
         
         # 🎯 Using handoff-based routing: Triage agent automatically routes to Quick Response or Strategy
-        print(f"[Handoff System] Processing query: '{message_text[:50] if message_text else 'image/file'}...'")
+        if DEBUG_MODE:
+            print(f"[Handoff System] Processing query: '{message_text[:50] if message_text else 'image/file'}...'")
 
         agent_context = AgentContext(
             thread=thread,
@@ -246,16 +262,37 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             try:
                 thinking_event = ProgressUpdateEvent(text="🧠 Thinking...")
                 yield thinking_event
-                print("🧠 Yielded initial thinking status to ChatKit")
+                if DEBUG_MODE:
+                    print("🧠 Yielded initial thinking status to ChatKit")
             except Exception as e:
-                print(f"⚠️  Failed to yield initial thinking status: {e}")
+                if DEBUG_MODE:
+                    print(f"⚠️  Failed to yield initial thinking status: {e}")
         
-        # Use tracing and session for better debugging and memory management
-        with trace(f"Jason coaching - {thread.id[:8]}"):
-            # When we have attachments (list input), disable session memory
-            # Agent SDK requires a session_input_callback for list inputs with sessions
-            use_session = None if attachment_ids else session
-            
+        # When we have attachments (list input), disable session memory
+        # Agent SDK requires a session_input_callback for list inputs with sessions
+        use_session = None if attachment_ids else session
+        
+        # Conditional tracing: only trace in debug mode to reduce latency
+        if DEBUG_MODE:
+            with trace(f"Jason coaching - {thread.id[:8]}"):
+                result = Runner.run_streamed(
+                    self.assistant,  # 🎯 Triage agent with automatic handoffs
+                    agent_input,  # 🖼️ Now includes attachments!
+                    context=agent_context,
+                    session=use_session,  # ✨ Disable session for image messages (Agent SDK limitation)
+                    run_config=RunConfig(
+                        model_settings=ModelSettings(
+                            parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
+                            reasoning_effort="low",  # ⚡ Optimized for speed (20-30% faster)
+                            verbosity="low",  # 💬 Short responses (matches voice guidelines)
+                        )
+                    ),
+                )
+                # 🔧 Stream events with ChatKit conversion
+                async for chatkit_event in stream_agent_response(agent_context, result):
+                    yield chatkit_event
+        else:
+            # Production mode: no tracing overhead
             result = Runner.run_streamed(
                 self.assistant,  # 🎯 Triage agent with automatic handoffs
                 agent_input,  # 🖼️ Now includes attachments!
@@ -264,21 +301,19 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 run_config=RunConfig(
                     model_settings=ModelSettings(
                         parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
-                        reasoning_effort="medium",  # 🧠 Balanced reasoning depth
+                        reasoning_effort="low",  # ⚡ Optimized for speed (20-30% faster)
                         verbosity="low",  # 💬 Short responses (matches voice guidelines)
                     )
                 ),
             )
-
             # 🔧 Stream events with ChatKit conversion
-            # Pass result DIRECTLY to stream_agent_response for proper citation handling
-            # This ensures file search citations render as clickable sources, not garbled text
             async for chatkit_event in stream_agent_response(agent_context, result):
                 yield chatkit_event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
         """Convert attachment to format Agent SDK expects (images only for now)."""
-        print(f"[to_message_content] Converting attachment {input.id} to message content")
+        if DEBUG_MODE:
+            print(f"[to_message_content] Converting attachment {input.id} to message content")
         
         # Get attachment data from custom storage
         if not hasattr(self.store, '_attachment_data'):
@@ -287,11 +322,13 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         attachment_data = self.store._attachment_data.get(input.id)
         if not attachment_data:
             print(f"[to_message_content] ERROR: Attachment {input.id} not found in _attachment_data")
-            print(f"[to_message_content] Available attachments: {list(self.store._attachment_data.keys())}")
+            if DEBUG_MODE:
+                print(f"[to_message_content] Available attachments: {list(self.store._attachment_data.keys())}")
             raise RuntimeError(f"Attachment {input.id} not found")
         
         mime_type = attachment_data["mime_type"]
-        print(f"[to_message_content] Attachment MIME type: {mime_type}")
+        if DEBUG_MODE:
+            print(f"[to_message_content] Attachment MIME type: {mime_type}")
         
         # Only support images
         if not mime_type or not mime_type.startswith("image/"):
@@ -304,7 +341,8 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             raise RuntimeError(f"No data bytes for attachment {input.id}")
         
         base64_image = base64.b64encode(data_bytes).decode("utf-8")
-        print(f"[to_message_content] Encoded image to base64, length: {len(base64_image)}")
+        if DEBUG_MODE:
+            print(f"[to_message_content] Encoded image to base64, length: {len(base64_image)}")
         
         # Build data URL as per Agent SDK docs
         data_url = f"data:{mime_type};base64,{base64_image}"
@@ -315,7 +353,8 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             "detail": "auto",
             "image_url": data_url,  # Direct data URL string
         }
-        print(f"[to_message_content] Returning Agent SDK format: type=input_image")
+        if DEBUG_MODE:
+            print(f"[to_message_content] Returning Agent SDK format: type=input_image")
         return result
 
 
