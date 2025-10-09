@@ -83,14 +83,14 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         # Base messages
         tool_messages = {
             "file_search": {
-                "running": "🔍 Searching knowledge base",
+                "running": "🔎 Searching knowledge base",
                 "completed": "✅ Found relevant content",
-                "analyzing": "🤔 Analyzing search results"
+                "analyzing": "🧪 Analyzing Results"
             },
             "web_search": {
                 "running": "🌐 Searching the web",
                 "completed": "✅ Found latest information",
-                "analyzing": "🤔 Analyzing web results"
+                "analyzing": "🧪 Analyzing Results"
             },
         }
         
@@ -155,12 +155,12 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             request_context=context,
         )
         
-        # 🤔 Emit initial "Thinking..." status BEFORE streaming starts
+        # 🧠 Emit initial "Thinking..." status BEFORE streaming starts
         if ProgressUpdateEvent is not None:
             try:
-                thinking_event = ProgressUpdateEvent(text="🤔 Thinking...")
+                thinking_event = ProgressUpdateEvent(text="🧠 Thinking...")
                 yield thinking_event
-                print("🤔 Yielded initial thinking status to ChatKit")
+                print("🧠 Yielded initial thinking status to ChatKit")
             except Exception as e:
                 print(f"⚠️  Failed to yield initial thinking status: {e}")
         
