@@ -6,6 +6,7 @@ import {
   COMPOSER_PLACEHOLDER,
   GREETING,
   STARTER_PROMPTS,
+  FILE_UPLOAD_URL,
 } from "../lib/config";
 
 type ChatKitPanelProps = {
@@ -75,8 +76,24 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
     composer: {
       placeholder: COMPOSER_PLACEHOLDER,
       attachments: {
-        enabled: false, // Disabled for now - requires proper ChatKit uploadStrategy types
-      },
+        enabled: true,
+        uploadStrategy: { 
+          type: "direct" as const,
+          uploadUrl: FILE_UPLOAD_URL,
+        },
+        maxSize: 20 * 1024 * 1024, // 20MB per file
+        maxCount: 5, // Up to 5 files per message
+        accept: {
+          // Images
+          "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"],
+          // Documents
+          "application/pdf": [".pdf"],
+          "text/plain": [".txt"],
+          "text/markdown": [".md"],
+          // Other common formats
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+        },
+      } as any, // Type assertion needed for custom uploadStrategy
     },
     threadItemActions: {
       feedback: false,
