@@ -200,8 +200,10 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         
         # Build input content - either string or list with message wrapper
         if attachment_ids:
-            # Build multi-part message content with text and attachments
+            # Build multi-part message content with text and inline attachments (images, text files)
+            # AND separate attachments array for PDFs/docs
             message_content = []
+            message_attachments = []  # For PDFs that need file_search
             
             # Add text if present
             if message_text:
@@ -217,9 +219,29 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     
                     # Convert to Agent SDK format
                     attachment_content = await self.to_message_content(attachment)
-                    message_content.append(attachment_content)
-                    if DEBUG_MODE:
-                        print(f"[respond] Converted attachment {attachment_id} to agent format")
+                    
+                    # Check if this is a file_id reference (PDF/doc) vs inline content
+                    if isinstance(attachment_content, dict) and attachment_content.get("_is_file_attachment"):
+                        # This is a PDF/doc - add to attachments array
+                        file_id = attachment_content["file_id"]
+                        message_attachments.append({
+                            "file_id": file_id,
+                            "tools": [{"type": "file_search"}]
+                        })
+                        if DEBUG_MODE:
+                            print(f"[respond] Added {file_id} to message attachments for file_search")
+                        
+                        # Also add a note to the message content
+                        message_content.append({
+                            "type": "input_text",
+                            "text": f"[Document attached: {attachment.name}]"
+                        })
+                    else:
+                        # Inline content (image, text file)
+                        message_content.append(attachment_content)
+                        if DEBUG_MODE:
+                            print(f"[respond] Added inline attachment to content")
+                            
                 except Exception as e:
                     print(f"[respond] ERROR processing attachment {attachment_id}: {e}")
                     if DEBUG_MODE:
@@ -227,13 +249,19 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                         traceback.print_exc()
             
             # Wrap in a message format for Responses API
-            agent_input = [
-                {
-                    "type": "message",
-                    "role": "user",
-                    "content": message_content
-                }
-            ]
+            message_dict = {
+                "type": "message",
+                "role": "user",
+                "content": message_content
+            }
+            
+            # Add attachments array if we have any PDFs/docs
+            if message_attachments:
+                message_dict["attachments"] = message_attachments
+                if DEBUG_MODE:
+                    print(f"[respond] Message has {len(message_attachments)} file attachment(s) for file_search")
+            
+            agent_input = [message_dict]
         else:
             # Just text, no attachments
             agent_input = message_text
@@ -317,9 +345,14 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         Convert attachment to format Agent SDK expects.
         
         Supported formats:
-        - Images (image/*): Converted to base64 data URLs
-        - Text files (text/*, .json, .md, .txt): Inline as input_text
-        - Documents (PDF, DOCX): Uploaded to OpenAI and referenced by file_id
+        - Images (image/*): Converted to base64 data URLs (inline in content)
+        - Text files (text/*, .json, .md, .txt): Decoded and inline as input_text
+        - Documents (PDF, DOCX, XLSX, PPTX): Uploaded to OpenAI, returns file_id marker
+          (caller must add to message.attachments array with file_search tool)
+        
+        Returns:
+        - For images/text: Dict with {"type": "input_image"} or {"type": "input_text"}
+        - For PDFs/docs: Dict with {"_is_file_attachment": True, "file_id": "..."}
         """
         if DEBUG_MODE:
             print(f"[to_message_content] Converting attachment {input.id} to message content")
@@ -382,7 +415,8 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             except UnicodeDecodeError:
                 raise RuntimeError(f"Failed to decode text file: {filename}")
         
-        # Handle PDFs, DOCX, and other documents - upload to OpenAI and add to vector store
+        # Handle PDFs, DOCX, and other documents - upload to OpenAI and return file_id
+        # These will be added to message.attachments (not inline content)
         elif mime_type in [
             "application/pdf",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
@@ -393,7 +427,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         ]:
             if DEBUG_MODE:
                 print(f"[to_message_content] Document type detected: {mime_type}")
-                print(f"[to_message_content] Uploading to OpenAI and adding to vector store...")
+                print(f"[to_message_content] Uploading to OpenAI for message attachment...")
             
             try:
                 # Get file extension
@@ -405,7 +439,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     tmp_path = tmp.name
                 
                 try:
-                    # Step 1: Upload to OpenAI with purpose="assistants"
+                    # Upload to OpenAI with purpose="assistants"
                     with open(tmp_path, "rb") as f:
                         openai_file = openai_client.files.create(
                             file=f,
@@ -414,41 +448,15 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     
                     if DEBUG_MODE:
                         print(f"[to_message_content] Uploaded to OpenAI, file_id: {openai_file.id}")
+                        print(f"[to_message_content] Returning file_id for message.attachments array")
                     
-                    # Step 2: Add to vector store so file_search can access it
-                    if JASON_VECTOR_STORE_ID:
-                        try:
-                            vector_store_file = openai_client.beta.vector_stores.files.create(
-                                vector_store_id=JASON_VECTOR_STORE_ID,
-                                file_id=openai_file.id
-                            )
-                            if DEBUG_MODE:
-                                print(f"[to_message_content] Added to vector store, status: {vector_store_file.status}")
-                            
-                            # Return message telling user the file is being indexed
-                            result = {
-                                "type": "input_text",
-                                "text": f"[Document attached: {filename}]\n\nI've added this to my knowledge base and I'm analyzing it now. The document is being indexed for search (usually takes 30-60 seconds)."
-                            }
-                        except Exception as e:
-                            print(f"[to_message_content] ERROR adding to vector store: {e}")
-                            # Fall back to just mentioning the file
-                            result = {
-                                "type": "input_text",
-                                "text": f"[Document attached: {filename}]\n\nNote: Could not add to knowledge base ({str(e)}), but I can try to help with general questions about this type of document."
-                            }
-                    else:
-                        # No vector store configured
-                        print(f"[to_message_content] WARNING: No vector store configured, file uploaded but not searchable")
-                        result = {
-                            "type": "input_text",
-                            "text": f"[Document attached: {filename}]\n\nNote: Vector store not configured. Please upload documents via the Knowledge Base section instead."
-                        }
-                    
-                    if DEBUG_MODE:
-                        print(f"[to_message_content] Returning document reference")
-                    
-                    return result
+                    # Return special marker dict with file_id
+                    # This will be detected in respond() and added to message.attachments
+                    return {
+                        "_is_file_attachment": True,  # Marker for respond() to handle specially
+                        "file_id": openai_file.id,
+                        "filename": filename
+                    }
                     
                 finally:
                     # Clean up temp file
