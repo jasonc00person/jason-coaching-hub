@@ -186,6 +186,48 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             async for chatkit_event in stream_agent_response(agent_context, result):
                 yield chatkit_event
 
+    async def create_attachment(
+        self, input: Any, context: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Phase 1: Create attachment metadata and return upload URL.
+        ChatKit will call this, then use the upload_url to send file bytes.
+        """
+        # Generate attachment ID
+        attachment_id = f"att_{secrets.token_urlsafe(16)}"
+        
+        print(f"[Phase 1 Create] Creating attachment: {attachment_id}")
+        print(f"[Phase 1 Create] Name: {input.get('name')}, MIME type: {input.get('mimeType')}")
+        
+        # Store initial attachment metadata (without file data yet)
+        if not hasattr(self.store, '_attachment_data'):
+            self.store._attachment_data = {}
+        
+        self.store._attachment_data[attachment_id] = {
+            "id": attachment_id,
+            "name": input.get("name", "unnamed"),
+            "mime_type": input.get("mimeType", "application/octet-stream"),
+            "size": 0,  # Will be updated in Phase 2
+            "data": None,  # Will be set in Phase 2
+        }
+        
+        # Build upload URL for Phase 2
+        # ChatKit will POST the file bytes to this URL
+        upload_url = f"/upload/{attachment_id}"
+        
+        # Return attachment object with upload_url
+        response = {
+            "id": attachment_id,
+            "name": input.get("name", "unnamed"),
+            "mimeType": input.get("mimeType", "application/octet-stream"),
+            "size": 0,
+            "upload_url": upload_url,  # Phase 2 will POST bytes here
+        }
+        
+        print(f"[Phase 1 Create] Returning attachment with upload_url: {upload_url}")
+        
+        return response
+    
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
         """Convert attachment to format GPT-5 can understand (images only for now)."""
         # Get attachment data from custom storage
@@ -369,9 +411,9 @@ async def list_files() -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Failed to list files: {str(e)}")
 
 
-@app.options("/api/files/upload")
-async def upload_file_options():
-    """Handle CORS preflight for file uploads."""
+@app.options("/upload/{attachment_id}")
+async def upload_file_options(attachment_id: str):
+    """Handle CORS preflight for Phase 2 file uploads."""
     return JSONResponse(
         content={},
         headers={
@@ -382,64 +424,42 @@ async def upload_file_options():
     )
 
 
-@app.post("/api/files/upload")
-async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
+@app.post("/upload/{attachment_id}")
+async def upload_file_bytes(attachment_id: str, file: UploadFile = File(...)):
     """
-    Upload a file for ChatKit attachments.
-    Returns format compatible with ChatKit's direct upload strategy.
+    Phase 2: Receive file bytes for an attachment created in Phase 1.
+    This is the upload_url returned by ChatKit's attachments.create.
     """
     try:
-        print(f"[Upload] Receiving file: {file.filename}, content_type: {file.content_type}")
+        print(f"[Phase 2 Upload] Receiving file bytes for attachment: {attachment_id}")
+        print(f"[Phase 2 Upload] Filename: {file.filename}, Content-Type: {file.content_type}")
         
         # Read file content
         content = await file.read()
-        print(f"[Upload] File size: {len(content)} bytes")
+        print(f"[Phase 2 Upload] File size: {len(content)} bytes")
         
-        # Generate attachment ID
-        attachment_id = f"att_{secrets.token_urlsafe(16)}"
-        
-        # Store attachment data directly in the store's internal dict
-        # We can't instantiate Attachment as it's a union type
+        # Get the attachment from store
         if not hasattr(jason_server.store, '_attachment_data'):
             jason_server.store._attachment_data = {}
         
-        jason_server.store._attachment_data[attachment_id] = {
-            "id": attachment_id,
-            "name": file.filename or "unnamed",
-            "mime_type": file.content_type or "application/octet-stream",
-            "size": len(content),
-            "data": content,
-        }
+        attachment_data = jason_server.store._attachment_data.get(attachment_id)
+        if not attachment_data:
+            print(f"[Phase 2 Upload] ERROR: Attachment {attachment_id} not found in store")
+            raise HTTPException(status_code=404, detail=f"Attachment {attachment_id} not found")
         
-        print(f"[Upload] Stored attachment: {attachment_id}")
+        # Update with actual file data
+        attachment_data["data"] = content
+        attachment_data["size"] = len(content)
         
-        # Build public URL for the attachment
-        api_base = os.getenv("API_BASE_URL", "https://jason-coaching-backend-production.up.railway.app")
-        attachment_url = f"{api_base}/api/files/attachment/{attachment_id}"
+        print(f"[Phase 2 Upload] Successfully stored {len(content)} bytes for {attachment_id}")
         
-        # Return format that ChatKit expects for direct upload
-        response_data = {
-            "id": attachment_id,
-            "name": file.filename or "unnamed",
-            "mimeType": file.content_type or "application/octet-stream",
-            "size": len(content),
-            "url": attachment_url,
-        }
-        
-        print(f"[Upload] Returning response: {response_data}")
-        print(f"[Upload] Response will be sent with status 200 and Content-Type: application/json")
-        
-        return JSONResponse(
-            content=response_data,
-            status_code=200,
-            headers={
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-            }
-        )
+        # Return 200 OK with no body (ChatKit just needs success confirmation)
+        return Response(status_code=200)
             
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"[Upload] ERROR: {e}")
+        print(f"[Phase 2 Upload] ERROR: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
