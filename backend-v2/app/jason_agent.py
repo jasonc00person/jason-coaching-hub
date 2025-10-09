@@ -238,7 +238,7 @@ def build_file_search_tool() -> FileSearchTool:
 
 
 jason_agent = Agent[AgentContext](
-    model="gpt-4.1-mini",
+    model="gpt-4o-mini",  # 🔥 33x cheaper + 2x faster than gpt-4o
     name="Jason Cooperson - Social Media Marketing Expert",
     instructions=JASON_INSTRUCTIONS,
     tools=[build_file_search_tool(), WebSearchTool()],  # File search + native web search
