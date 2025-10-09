@@ -52,7 +52,11 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
   const chatkit = useChatKit({
     api: { 
       url: `${CHATKIT_API_URL}?sid=${sessionId}`, 
-      domainKey: CHATKIT_API_DOMAIN_KEY
+      domainKey: CHATKIT_API_DOMAIN_KEY,
+      uploadStrategy: {
+        type: "direct" as const,
+        uploadUrl: FILE_UPLOAD_URL,
+      },
     },
     theme: {
       colorScheme: theme,
@@ -77,10 +81,6 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
       placeholder: COMPOSER_PLACEHOLDER,
       attachments: {
         enabled: true,
-        uploadStrategy: { 
-          type: "direct" as const,
-          uploadUrl: FILE_UPLOAD_URL,
-        },
         maxSize: 20 * 1024 * 1024, // 20MB per file
         maxCount: 5, // Up to 5 files per message
         accept: {
@@ -93,7 +93,7 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
           // Other common formats
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
         },
-      } as any, // Type assertion needed for custom uploadStrategy
+      },
     },
     threadItemActions: {
       feedback: false,
