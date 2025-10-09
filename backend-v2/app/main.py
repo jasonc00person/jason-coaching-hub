@@ -136,6 +136,13 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         if not message_text:
             return
 
+        # Show "Thinking..." status immediately to replace default loading dots
+        if ProgressUpdateEvent is not None:
+            try:
+                yield ProgressUpdateEvent(text="🤔 Thinking...")
+            except Exception as e:
+                print(f"⚠️  Failed to emit initial thinking status: {e}")
+
         # Auto-generate thread title from first user message if not set
         if not thread.title:
             thread.title = self.store._generate_title_from_message(message_text)
@@ -249,17 +256,8 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                                     print(f"⚠️  Failed to stream tool output updates: {e}")
                             
                         elif event.name == "message_output_created":
-                            # Agent starting to write response
+                            # Agent starting to write response - just log it
                             try:
-                                # Show "crafting response" indicator
-                                if ProgressUpdateEvent is not None:
-                                    try:
-                                        crafting_msg = "✍️ Crafting response..."
-                                        await agent_context.stream(ProgressUpdateEvent(text=crafting_msg))
-                                        print(f"✍️  Streamed crafting update to ChatKit")
-                                    except Exception as e:
-                                        print(f"⚠️  Failed to stream crafting update: {e}")
-                                
                                 msg = ItemHelpers.text_message_output(event.item)
                                 print(f"💬 Message: {msg[:100]}...")
                             except Exception as e:
