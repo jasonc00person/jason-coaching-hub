@@ -177,7 +177,7 @@ class MemoryStore(Store[dict[str, Any]]):
 
     # -- Files -----------------------------------------------------------
     async def create_attachment(
-        self, input: dict[str, Any], context: dict[str, Any]
+        self, input: Any, context: dict[str, Any]
     ) -> dict[str, Any]:
         """
         Phase 1: Create attachment metadata and return upload URL.
@@ -189,7 +189,7 @@ class MemoryStore(Store[dict[str, Any]]):
         attachment_id = f"att_{secrets.token_urlsafe(16)}"
         
         print(f"[Phase 1 Create] Creating attachment: {attachment_id}")
-        print(f"[Phase 1 Create] Name: {input.get('name')}, MIME type: {input.get('mimeType')}")
+        print(f"[Phase 1 Create] Name: {input.name}, MIME type: {input.mime_type}")
         
         # Store initial attachment metadata (without file data yet)
         if not hasattr(self, '_attachment_data'):
@@ -197,8 +197,8 @@ class MemoryStore(Store[dict[str, Any]]):
         
         self._attachment_data[attachment_id] = {
             "id": attachment_id,
-            "name": input.get("name", "unnamed"),
-            "mime_type": input.get("mimeType", "application/octet-stream"),
+            "name": input.name or "unnamed",
+            "mime_type": input.mime_type or "application/octet-stream",
             "size": 0,  # Will be updated in Phase 2
             "data": None,  # Will be set in Phase 2
         }
@@ -210,8 +210,8 @@ class MemoryStore(Store[dict[str, Any]]):
         # Return attachment object with upload_url
         response = {
             "id": attachment_id,
-            "name": input.get("name", "unnamed"),
-            "mimeType": input.get("mimeType", "application/octet-stream"),
+            "name": input.name or "unnamed",
+            "mimeType": input.mime_type or "application/octet-stream",
             "size": 0,
             "upload_url": upload_url,  # Phase 2 will POST bytes here
         }
