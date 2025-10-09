@@ -235,6 +235,9 @@ class MemoryStore(Store[dict[str, Any]]):
         
         print(f"[Phase 1 Create] Returning {type(attachment).__name__} with upload_url: {upload_url}")
         
+        # Store the attachment object so load_attachment can find it later
+        self._attachments[attachment_id] = attachment
+        
         return attachment
     
     async def save_attachment(
