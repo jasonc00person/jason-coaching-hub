@@ -382,7 +382,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             except UnicodeDecodeError:
                 raise RuntimeError(f"Failed to decode text file: {filename}")
         
-        # Handle PDFs, DOCX, and other documents - upload to OpenAI
+        # Handle PDFs, DOCX, and other documents - upload to OpenAI and add to vector store
         elif mime_type in [
             "application/pdf",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
@@ -393,7 +393,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         ]:
             if DEBUG_MODE:
                 print(f"[to_message_content] Document type detected: {mime_type}")
-                print(f"[to_message_content] Uploading to OpenAI for file_search...")
+                print(f"[to_message_content] Uploading to OpenAI and adding to vector store...")
             
             try:
                 # Get file extension
@@ -405,7 +405,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     tmp_path = tmp.name
                 
                 try:
-                    # Upload to OpenAI with purpose="assistants"
+                    # Step 1: Upload to OpenAI with purpose="assistants"
                     with open(tmp_path, "rb") as f:
                         openai_file = openai_client.files.create(
                             file=f,
@@ -415,12 +415,35 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     if DEBUG_MODE:
                         print(f"[to_message_content] Uploaded to OpenAI, file_id: {openai_file.id}")
                     
-                    # Return as input_text with a note about the uploaded file
-                    # The file_search tool will automatically access it via the agent's vector store
-                    result = {
-                        "type": "input_text",
-                        "text": f"[Document attached: {filename}]\n\nPlease analyze the attached {mime_type.split('/')[-1]} document."
-                    }
+                    # Step 2: Add to vector store so file_search can access it
+                    if JASON_VECTOR_STORE_ID:
+                        try:
+                            vector_store_file = openai_client.beta.vector_stores.files.create(
+                                vector_store_id=JASON_VECTOR_STORE_ID,
+                                file_id=openai_file.id
+                            )
+                            if DEBUG_MODE:
+                                print(f"[to_message_content] Added to vector store, status: {vector_store_file.status}")
+                            
+                            # Return message telling user the file is being indexed
+                            result = {
+                                "type": "input_text",
+                                "text": f"[Document attached: {filename}]\n\nI've added this to my knowledge base and I'm analyzing it now. The document is being indexed for search (usually takes 30-60 seconds)."
+                            }
+                        except Exception as e:
+                            print(f"[to_message_content] ERROR adding to vector store: {e}")
+                            # Fall back to just mentioning the file
+                            result = {
+                                "type": "input_text",
+                                "text": f"[Document attached: {filename}]\n\nNote: Could not add to knowledge base ({str(e)}), but I can try to help with general questions about this type of document."
+                            }
+                    else:
+                        # No vector store configured
+                        print(f"[to_message_content] WARNING: No vector store configured, file uploaded but not searchable")
+                        result = {
+                            "type": "input_text",
+                            "text": f"[Document attached: {filename}]\n\nNote: Vector store not configured. Please upload documents via the Knowledge Base section instead."
+                        }
                     
                     if DEBUG_MODE:
                         print(f"[to_message_content] Returning document reference")
@@ -436,6 +459,8 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                         
             except Exception as e:
                 print(f"[to_message_content] ERROR uploading document: {e}")
+                import traceback
+                traceback.print_exc()
                 raise RuntimeError(f"Failed to process document {filename}: {str(e)}")
         
         else:
