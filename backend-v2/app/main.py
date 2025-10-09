@@ -23,11 +23,13 @@ from chatkit.types import (
     ThreadStreamEvent,
     UserMessageItem,
 )
-try:
-    from chatkit.types import ProgressUpdateEvent
-except ImportError:
-    # Fallback if ProgressUpdateEvent doesn't exist
-    ProgressUpdateEvent = None
+# ProgressUpdateEvent commented out - keep server events raw (v0.0.2 compatibility)
+# try:
+#     from chatkit.types import ProgressUpdateEvent
+# except ImportError:
+#     # Fallback if ProgressUpdateEvent doesn't exist
+#     ProgressUpdateEvent = None
+ProgressUpdateEvent = None  # Disabled for v0.0.2
 from fastapi import Depends, FastAPI, Request, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
@@ -364,7 +366,11 @@ app = FastAPI(title="Jason's Coaching ChatKit API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:3000",  # Alternative dev port
+        "*"  # Allow all for production flexibility
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
