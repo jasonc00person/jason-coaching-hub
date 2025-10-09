@@ -368,50 +368,45 @@ async def list_files() -> dict[str, Any]:
 @app.post("/api/files/upload")
 async def upload_file(file: UploadFile = File(...)) -> dict[str, Any]:
     """
-    Upload a file to the vector store.
+    Upload a file for ChatKit attachments.
+    Returns format compatible with ChatKit's direct upload strategy.
     """
     try:
-        if not JASON_VECTOR_STORE_ID:
-            raise HTTPException(
-                status_code=400, 
-                detail="Vector store ID not configured. Please set JASON_VECTOR_STORE_ID."
-            )
+        print(f"[Upload] Receiving file: {file.filename}, content_type: {file.content_type}")
         
         # Read file content
         content = await file.read()
+        print(f"[Upload] File size: {len(content)} bytes")
         
-        # Create a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as tmp:
-            tmp.write(content)
-            tmp_path = tmp.name
+        # Generate attachment ID
+        attachment_id = f"att_{secrets.token_urlsafe(16)}"
         
-        try:
-            # Upload to OpenAI
-            with open(tmp_path, "rb") as f:
-                uploaded_file = openai_client.files.create(
-                    file=f,
-                    purpose="assistants"
-                )
-            
-            # Add to vector store
-            vector_store_file = openai_client.beta.vector_stores.files.create(
-                vector_store_id=JASON_VECTOR_STORE_ID,
-                file_id=uploaded_file.id
-            )
-            
-            return {
-                "id": uploaded_file.id,
-                "filename": uploaded_file.filename,
-                "bytes": uploaded_file.bytes,
-                "created_at": uploaded_file.created_at,
-                "status": vector_store_file.status,
-                "vector_store_id": JASON_VECTOR_STORE_ID,
-            }
-        finally:
-            # Clean up temporary file
-            os.unlink(tmp_path)
+        # Create Attachment object (as expected by ChatKit store)
+        attachment = Attachment(
+            id=attachment_id,
+            name=file.filename or "unnamed",
+            mime_type=file.content_type or "application/octet-stream",
+            size=len(content),
+            data=content,
+        )
+        
+        # Save to store (async)
+        await jason_server.store.save_attachment(attachment, {})
+        
+        print(f"[Upload] Stored attachment: {attachment_id}")
+        
+        # Return format ChatKit expects for direct upload
+        return {
+            "id": attachment_id,
+            "name": file.filename,
+            "size": len(content),
+            "mimeType": file.content_type or "application/octet-stream",
+        }
             
     except Exception as e:
+        print(f"[Upload] ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
 
