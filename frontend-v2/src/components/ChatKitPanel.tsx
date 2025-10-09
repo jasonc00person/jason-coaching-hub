@@ -53,10 +53,7 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
     api: { 
       url: `${CHATKIT_API_URL}?sid=${sessionId}`, 
       domainKey: CHATKIT_API_DOMAIN_KEY,
-      // Use hosted strategy since we're using ChatKitServer
-      uploadStrategy: {
-        type: "hosted" as const,
-      },
+      // Don't specify uploadStrategy - let ChatKitServer handle it
     },
     theme: {
       colorScheme: theme,

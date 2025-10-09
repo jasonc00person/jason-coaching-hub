@@ -418,7 +418,6 @@ async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
         attachment_url = f"{api_base}/api/files/attachment/{attachment_id}"
         
         # Return format that ChatKit expects for direct upload
-        # Include URL so ChatKit can retrieve/verify the file
         response_data = {
             "id": attachment_id,
             "name": file.filename or "unnamed",
@@ -428,6 +427,7 @@ async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
         }
         
         print(f"[Upload] Returning response: {response_data}")
+        print(f"[Upload] Response will be sent with status 200 and Content-Type: application/json")
         
         return JSONResponse(
             content=response_data,
