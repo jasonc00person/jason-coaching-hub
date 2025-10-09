@@ -186,48 +186,6 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             async for chatkit_event in stream_agent_response(agent_context, result):
                 yield chatkit_event
 
-    async def create_attachment(
-        self, input: Any, context: dict[str, Any]
-    ) -> dict[str, Any]:
-        """
-        Phase 1: Create attachment metadata and return upload URL.
-        ChatKit will call this, then use the upload_url to send file bytes.
-        """
-        # Generate attachment ID
-        attachment_id = f"att_{secrets.token_urlsafe(16)}"
-        
-        print(f"[Phase 1 Create] Creating attachment: {attachment_id}")
-        print(f"[Phase 1 Create] Name: {input.get('name')}, MIME type: {input.get('mimeType')}")
-        
-        # Store initial attachment metadata (without file data yet)
-        if not hasattr(self.store, '_attachment_data'):
-            self.store._attachment_data = {}
-        
-        self.store._attachment_data[attachment_id] = {
-            "id": attachment_id,
-            "name": input.get("name", "unnamed"),
-            "mime_type": input.get("mimeType", "application/octet-stream"),
-            "size": 0,  # Will be updated in Phase 2
-            "data": None,  # Will be set in Phase 2
-        }
-        
-        # Build upload URL for Phase 2
-        # ChatKit will POST the file bytes to this URL
-        upload_url = f"/upload/{attachment_id}"
-        
-        # Return attachment object with upload_url
-        response = {
-            "id": attachment_id,
-            "name": input.get("name", "unnamed"),
-            "mimeType": input.get("mimeType", "application/octet-stream"),
-            "size": 0,
-            "upload_url": upload_url,  # Phase 2 will POST bytes here
-        }
-        
-        print(f"[Phase 1 Create] Returning attachment with upload_url: {upload_url}")
-        
-        return response
-    
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
         """Convert attachment to format GPT-5 can understand (images only for now)."""
         # Get attachment data from custom storage
