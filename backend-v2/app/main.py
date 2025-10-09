@@ -411,10 +411,12 @@ async def upload_file_bytes(attachment_id: str, file: UploadFile = File(...)):
         attachment_data["size"] = len(content)
         
         # Also update the Attachment object's size_bytes (best practice per docs)
+        # Pydantic models are immutable, so we create a new instance with updated size
         attachment = jason_server.store._attachments.get(attachment_id)
         if attachment:
-            attachment.size_bytes = len(content)
-            jason_server.store._attachments[attachment_id] = attachment
+            # Use model_copy with update to create a new instance
+            updated_attachment = attachment.model_copy(update={"size_bytes": len(content)})
+            jason_server.store._attachments[attachment_id] = updated_attachment
         
         print(f"[Phase 2 Upload] Successfully stored {len(content)} bytes for {attachment_id}")
         
