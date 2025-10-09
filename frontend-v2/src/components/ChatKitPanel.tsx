@@ -18,6 +18,11 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
 
   useEffect(() => {
     isMounted.current = true;
+    if (import.meta.env.DEV) {
+      console.log("[ChatKitPanel] Component mounted");
+      console.log("[ChatKitPanel] API URL:", CHATKIT_API_URL);
+      console.log("[ChatKitPanel] Domain Key:", CHATKIT_API_DOMAIN_KEY);
+    }
     return () => {
       isMounted.current = false;
     };
@@ -68,16 +73,15 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
       }
     },
     onError: ({ error }) => {
-      // ChatKit handles displaying the error to the user
+      // Always log errors to console
       console.error("[ChatKitPanel] ChatKit error:", error);
+      console.error("[ChatKitPanel] Error message:", error?.message);
+      console.error("[ChatKitPanel] Error stack:", error?.stack);
       
       if (isMounted.current) {
-        // Check if it's an integration error
-        if (error.message?.includes("integration") || error.message?.includes("domain")) {
-          setIntegrationError(
-            "ChatKit integration error. Please check your domain key configuration."
-          );
-        }
+        // Show error message to user
+        const errorMsg = error?.message || "Unknown error occurred";
+        setIntegrationError(errorMsg);
       }
     },
   });
@@ -85,11 +89,11 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#161618]">
       {integrationError && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 max-w-md">
-          <div className="bg-red-900/90 border border-red-700 rounded-lg p-4 shadow-lg">
+        <div className="absolute top-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-20 sm:max-w-md">
+          <div className="bg-red-900/95 backdrop-blur-sm border border-red-700/50 rounded-xl p-4 shadow-2xl">
             <div className="flex items-start gap-3">
               <svg
-                className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5"
+                className="h-5 w-5 text-red-300 flex-shrink-0 mt-0.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -101,16 +105,18 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
                   d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-red-200">Integration Error</h3>
-                <p className="text-xs text-red-300 mt-1">{integrationError}</p>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-red-100">Connection Error</h3>
+                <p className="text-xs text-red-200 mt-1 break-words">{integrationError}</p>
+                <p className="text-xs text-red-300/80 mt-2">Please check your connection</p>
               </div>
               <button
                 onClick={() => setIntegrationError(null)}
-                className="text-red-400 hover:text-red-300"
+                className="text-red-300 hover:text-red-100 transition-colors touch-manipulation p-1"
+                aria-label="Dismiss error"
               >
                 <svg
-                  className="h-4 w-4"
+                  className="h-5 w-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -128,7 +134,16 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
         </div>
       )}
       
-      <ChatKit control={chatkit.control} className="block h-full w-full" />
+      {chatkit.control ? (
+        <ChatKit control={chatkit.control} className="block h-full w-full" />
+      ) : (
+        <div className="flex items-center justify-center h-full">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-blue-500 animate-spin" />
+            <div className="text-gray-400 text-sm">Loading ChatKit...</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
