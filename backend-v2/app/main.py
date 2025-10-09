@@ -145,33 +145,55 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 ),
             )
 
-            # Stream events with tool progress visualization
-            async for event in stream_agent_response(agent_context, result):
-                # Log event for debugging (can be removed later)
-                event_type = type(event).__name__
-                print(f"[Event] {event_type}: {getattr(event, 'type', 'N/A')}")
+            # 🔧 Stream events with tool visualization
+            # Use stream_agent_response which converts Agent SDK events to ChatKit format
+            # BUT also log the raw Agent SDK events to see tool calls
+            
+            # We need to intercept events before they go to stream_agent_response
+            # So let's create a wrapper that logs AND forwards
+            async def event_logger_and_forwarder():
+                """Log Agent SDK events and forward them for ChatKit processing"""
+                from agents import ItemHelpers
+                from openai.types.responses import ResponseTextDeltaEvent
                 
-                # Check if this is a tool-related event and log details
-                if hasattr(event, 'type'):
-                    event_type_str = str(getattr(event, 'type', ''))
+                async for event in result.stream_events():
+                    event_type = event.type
                     
-                    # Log tool usage for debugging
-                    if 'tool' in event_type_str.lower():
-                        print(f"[Tool Event] Type: {event_type_str}, Event: {event}")
-                        
-                        # Try to extract tool name if available
-                        tool_name = None
-                        if hasattr(event, 'name'):
-                            tool_name = event.name
-                        elif hasattr(event, 'tool_name'):
-                            tool_name = event.tool_name
-                        
-                        if tool_name:
-                            print(f"[Tool] Detected tool: {tool_name}")
+                    # Log tool events (per Agent SDK docs pattern)
+                    if event_type == "run_item_stream_event":
+                        if event.name == "tool_called":
+                            tool_name = event.item.tool_name
+                            print(f"🔧 Tool Called: {tool_name}")
+                            print(f"   Args: {getattr(event.item, 'arguments', {})}")
+                            
+                        elif event.name == "tool_output":
+                            output_preview = str(event.item.output)[:200]
+                            print(f"✅ Tool Output: {output_preview}...")
+                            
+                        elif event.name == "message_output_created":
+                            msg = ItemHelpers.text_message_output(event.item)
+                            print(f"💬 Message: {msg[:100]}...")
+                    
+                    # Forward the event unchanged
+                    yield event
+            
+            # Create a mock result object that uses our logging wrapper
+            class LoggingResultWrapper:
+                def __init__(self, original_result, event_generator):
+                    self._original = original_result
+                    self._event_gen = event_generator
                 
-                # ChatKit's stream_agent_response should automatically handle
-                # tool progress visualization. Just pass through all events.
-                yield event
+                def stream_events(self):
+                    return self._event_gen
+                    
+                async def get_final_output(self):
+                    return await self._original.get_final_output()
+            
+            logged_result = LoggingResultWrapper(result, event_logger_and_forwarder())
+            
+            # Now use stream_agent_response which handles ChatKit event conversion
+            async for chatkit_event in stream_agent_response(agent_context, logged_result):
+                yield chatkit_event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
         """Convert attachment to format GPT-5 can understand (images only for now)."""
