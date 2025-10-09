@@ -211,18 +211,18 @@ class MemoryStore(Store[dict[str, Any]]):
         import os
         api_base = os.getenv("API_BASE_URL", "https://jason-coaching-backend-production.up.railway.app")
         upload_url = f"{api_base}/upload/{attachment_id}"
+        preview_url = f"{api_base}/api/files/attachment/{attachment_id}"
         
         # Return proper Pydantic model based on MIME type
         if input.mime_type and input.mime_type.startswith("image/"):
-            # For images, we could optionally provide a preview_url
-            # but we'll omit it for now since the image hasn't been uploaded yet
+            # For images, preview_url is required and points to where the image will be accessible
             attachment = ImageAttachment(
                 id=attachment_id,
                 name=input.name or "unnamed",
                 mime_type=input.mime_type,
                 size_bytes=0,
                 upload_url=upload_url,
-                # Don't include preview_url - it's optional and will default to None properly
+                preview_url=preview_url,  # Required field for ImageAttachment
             )
         else:
             attachment = FileAttachment(
