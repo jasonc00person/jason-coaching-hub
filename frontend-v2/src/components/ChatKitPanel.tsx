@@ -75,7 +75,8 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
     composer: {
       placeholder: COMPOSER_PLACEHOLDER,
       attachments: {
-        enabled: false, // Disable inline attachments, use Knowledge Base panel instead
+        enabled: true, // ✨ Enable image uploads for GPT-5 vision
+        accept: "image/*", // Only accept images
       },
     },
     threadItemActions: {

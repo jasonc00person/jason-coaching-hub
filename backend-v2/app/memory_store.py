@@ -26,6 +26,8 @@ class MemoryStore(Store[dict[str, Any]]):
     def __init__(self) -> None:
         # Store threads by session_id -> thread_id -> ThreadState
         self._sessions: dict[str, dict[str, _ThreadState]] = {}
+        # Store attachments by attachment_id -> Attachment
+        self._attachments: dict[str, Attachment] = {}
     
     def _get_session_id(self, context: dict[str, Any]) -> str:
         """Extract session ID from query parameters."""
@@ -179,23 +181,20 @@ class MemoryStore(Store[dict[str, Any]]):
         attachment: Attachment,
         context: dict[str, Any],
     ) -> None:
-        raise NotImplementedError(
-            "MemoryStore does not persist attachments. Provide a Store implementation "
-            "that enforces authentication and authorization before enabling uploads."
-        )
+        """Save attachment in memory."""
+        self._attachments[attachment.id] = attachment
 
     async def load_attachment(
         self,
         attachment_id: str,
         context: dict[str, Any],
     ) -> Attachment:
-        raise NotImplementedError(
-            "MemoryStore does not load attachments. Provide a Store implementation "
-            "that enforces authentication and authorization before enabling uploads."
-        )
+        """Load attachment from memory."""
+        if attachment_id not in self._attachments:
+            raise NotFoundError(f"Attachment {attachment_id} not found")
+        return self._attachments[attachment_id]
 
     async def delete_attachment(self, attachment_id: str, context: dict[str, Any]) -> None:
-        raise NotImplementedError(
-            "MemoryStore does not delete attachments because they are never stored."
-        )
+        """Delete attachment from memory."""
+        self._attachments.pop(attachment_id, None)
 

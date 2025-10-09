@@ -28,6 +28,8 @@ from openai.types.responses import ResponseInputContentParam
 from starlette.responses import JSONResponse
 import secrets
 import tempfile
+import base64
+import mimetypes
 
 from .jason_agent import jason_agent, JASON_VECTOR_STORE_ID
 from .memory_store import MemoryStore
@@ -106,6 +108,8 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 run_config=RunConfig(
                     model_settings=ModelSettings(
                         parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
+                        reasoning_effort="medium",  # 🧠 Balanced reasoning depth
+                        verbosity="low",  # 💬 Short responses (matches voice guidelines)
                     )
                 ),
             )
@@ -114,7 +118,27 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 yield event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
-        raise RuntimeError("File attachments are not supported in this demo.")
+        """Convert attachment to format GPT-5 can understand (images only for now)."""
+        # Get MIME type from filename
+        mime_type, _ = mimetypes.guess_type(input.name or "")
+        
+        # Only support images
+        if not mime_type or not mime_type.startswith("image/"):
+            raise RuntimeError(f"Only image attachments are supported. Got: {mime_type}")
+        
+        # Read attachment data
+        attachment_data = await self.store.load_attachment(input.id, {})
+        
+        # Encode to base64 for GPT-5
+        base64_image = base64.b64encode(attachment_data.data).decode("utf-8")
+        
+        # Return in format GPT-5 expects
+        return {
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:{mime_type};base64,{base64_image}"
+            }
+        }
 
 
 jason_server = JasonCoachingServer(agent=jason_agent)
