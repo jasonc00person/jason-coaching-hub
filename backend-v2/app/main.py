@@ -247,11 +247,15 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         
         # Use tracing and session for better debugging and memory management
         with trace(f"Jason coaching - {thread.id[:8]}"):
+            # When we have attachments (list input), disable session memory
+            # Agent SDK requires a session_input_callback for list inputs with sessions
+            use_session = None if attachment_ids else session
+            
             result = Runner.run_streamed(
                 selected_agent,  # 🎯 Dynamically selected agent
                 agent_input,  # 🖼️ Now includes attachments!
                 context=agent_context,
-                session=session,  # ✨ Native session support for agent memory
+                session=use_session,  # ✨ Disable session for image messages (Agent SDK limitation)
                 run_config=RunConfig(
                     model_settings=ModelSettings(
                         parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
