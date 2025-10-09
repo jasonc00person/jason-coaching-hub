@@ -162,17 +162,23 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     # Log tool events (per Agent SDK docs pattern)
                     if event_type == "run_item_stream_event":
                         if event.name == "tool_called":
-                            tool_name = event.item.tool_name
+                            # ToolCallItem might use 'name' or 'tool_name' depending on version
+                            tool_name = getattr(event.item, 'name', None) or getattr(event.item, 'tool_name', 'unknown_tool')
+                            args = getattr(event.item, 'arguments', {})
                             print(f"🔧 Tool Called: {tool_name}")
-                            print(f"   Args: {getattr(event.item, 'arguments', {})}")
+                            print(f"   Args: {args}")
                             
                         elif event.name == "tool_output":
-                            output_preview = str(event.item.output)[:200]
+                            output = getattr(event.item, 'output', '')
+                            output_preview = str(output)[:200] if output else 'No output'
                             print(f"✅ Tool Output: {output_preview}...")
                             
                         elif event.name == "message_output_created":
-                            msg = ItemHelpers.text_message_output(event.item)
-                            print(f"💬 Message: {msg[:100]}...")
+                            try:
+                                msg = ItemHelpers.text_message_output(event.item)
+                                print(f"💬 Message: {msg[:100]}...")
+                            except Exception as e:
+                                print(f"💬 Message created (couldn't extract text: {e})")
                     
                     # Forward the event unchanged
                     yield event
