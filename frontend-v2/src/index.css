@@ -90,3 +90,14 @@ html, body {
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Hide ChatKit thread history/switcher UI for session-based chat */
+[data-chatkit-threads],
+[data-chatkit-thread-switcher],
+[data-chatkit-sidebar],
+button[aria-label*="thread"],
+button[aria-label*="Thread"],
+button[aria-label*="history"],
+button[aria-label*="History"] {
+  display: none !important;
+}

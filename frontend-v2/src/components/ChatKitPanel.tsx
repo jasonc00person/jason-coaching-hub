@@ -22,6 +22,7 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
       console.log("[ChatKitPanel] Component mounted");
       console.log("[ChatKitPanel] API URL:", CHATKIT_API_URL);
       console.log("[ChatKitPanel] Domain Key:", CHATKIT_API_DOMAIN_KEY);
+      console.log("[ChatKitPanel] Session-based chat - history disabled");
     }
     return () => {
       isMounted.current = false;

@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+import json
+import os
+from pathlib import Path
 
 from chatkit.store import NotFoundError, Store
 from chatkit.types import (
@@ -10,6 +13,7 @@ from chatkit.types import (
     Page,
     ThreadItem,
     ThreadMetadata,
+    UserMessageItem,
 )
 
 
@@ -20,10 +24,18 @@ class _ThreadState:
 
 
 class MemoryStore(Store[dict[str, Any]]):
-    """Simple in-memory store compatible with the ChatKit server interface."""
+    """Simple in-memory store - no persistence, purely session-based."""
 
     def __init__(self) -> None:
         self._threads: dict[str, _ThreadState] = {}
+    
+    def _generate_title_from_message(self, message: str) -> str:
+        """Generate a thread title from the first user message."""
+        # Take first 50 characters and add ellipsis if truncated
+        title = message.strip()[:60]
+        if len(message.strip()) > 60:
+            title += "..."
+        return title
 
     # -- Thread metadata -------------------------------------------------
     async def load_thread(self, thread_id: str, context: dict[str, Any]) -> ThreadMetadata:

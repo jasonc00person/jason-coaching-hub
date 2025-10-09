@@ -71,6 +71,11 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         if not message_text:
             return
 
+        # Auto-generate thread title from first user message if not set
+        if not thread.title:
+            thread.title = self.store._generate_title_from_message(message_text)
+            await self.store.save_thread(thread, context)
+
         agent_context = AgentContext(
             thread=thread,
             store=self.store,
