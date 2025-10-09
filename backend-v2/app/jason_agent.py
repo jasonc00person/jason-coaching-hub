@@ -199,7 +199,7 @@ def build_web_search_tool() -> WebSearchTool:
 # Handles: greetings, simple questions, casual chat
 quick_response_agent = Agent[AgentContext](
     model="gpt-5-mini",
-    name="Jason Cooperson - Quick Response",
+    name="quick_response_agent",
     instructions=QUICK_RESPONSE_INSTRUCTIONS,
     tools=[],  # 🚀 ZERO tools = fast & cheap
     # No handoffs - this is a specialist agent
@@ -209,7 +209,7 @@ quick_response_agent = Agent[AgentContext](
 # Handles: complex strategy, templates, web search, image analysis
 strategy_agent = Agent[AgentContext](
     model="gpt-5",
-    name="Jason Cooperson - Strategy Expert",
+    name="strategy_agent",
     instructions=STRATEGY_INSTRUCTIONS,
     tools=[build_file_search_tool(), build_web_search_tool()],
     # No handoffs - this is a specialist agent
@@ -219,7 +219,7 @@ strategy_agent = Agent[AgentContext](
 # Analyzes incoming messages and hands off to appropriate specialist
 triage_agent = Agent[AgentContext](
     model="gpt-5-mini",  # 💰 Cheap model just for routing decisions
-    name="Jason Cooperson - Triage",
+    name="triage_agent",
     instructions=TRIAGE_INSTRUCTIONS,
     handoffs=[quick_response_agent, strategy_agent],  # 🎯 Auto-routing
     tools=[],  # Triage doesn't need tools, specialists handle that
