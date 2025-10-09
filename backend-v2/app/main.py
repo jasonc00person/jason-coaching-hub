@@ -410,6 +410,12 @@ async def upload_file_bytes(attachment_id: str, file: UploadFile = File(...)):
         attachment_data["data"] = content
         attachment_data["size"] = len(content)
         
+        # Also update the Attachment object's size_bytes (best practice per docs)
+        attachment = jason_server.store._attachments.get(attachment_id)
+        if attachment:
+            attachment.size_bytes = len(content)
+            jason_server.store._attachments[attachment_id] = attachment
+        
         print(f"[Phase 2 Upload] Successfully stored {len(content)} bytes for {attachment_id}")
         
         # Return 200 OK with no body (ChatKit just needs success confirmation)
