@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from agents import RunConfig, Runner
+from agents import RunConfig, Runner, SQLiteSession, trace, InputGuardrailTripwireTriggered
 from agents.model_settings import ModelSettings
 from chatkit.agents import AgentContext, stream_agent_response
 from chatkit.server import ChatKitServer, StreamingResult
@@ -51,6 +51,17 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         self.store = MemoryStore()
         super().__init__(self.store)
         self.assistant = agent
+        # Cache SQLiteSession instances per thread
+        self.sessions: dict[str, SQLiteSession] = {}
+    
+    def _get_session(self, thread_id: str) -> SQLiteSession:
+        """Get or create a SQLiteSession for this thread."""
+        if thread_id not in self.sessions:
+            self.sessions[thread_id] = SQLiteSession(
+                session_id=thread_id,
+                db_path="conversations.db"  # All sessions in one DB
+            )
+        return self.sessions[thread_id]
 
     async def respond(
         self,
@@ -76,25 +87,70 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             thread.title = self.store._generate_title_from_message(message_text)
             await self.store.save_thread(thread, context)
 
+        # Get SQLiteSession for this thread (for agent memory)
+        session = self._get_session(thread.id)
+
         agent_context = AgentContext(
             thread=thread,
             store=self.store,
             request_context=context,
         )
-        result = Runner.run_streamed(
-            self.assistant,
-            message_text,
-            context=agent_context,
-            run_config=RunConfig(
-                model_settings=ModelSettings(
-                    temperature=0.7,
-                    parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
+        
+        try:
+            # Use tracing and session for better debugging and memory management
+            with trace(f"Jason coaching - {thread.id[:8]}"):
+                result = Runner.run_streamed(
+                    self.assistant,
+                    message_text,
+                    context=agent_context,
+                    session=session,  # ✨ Native session support for agent memory
+                    run_config=RunConfig(
+                        model_settings=ModelSettings(
+                            temperature=0.7,
+                            parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
+                        )
+                    ),
                 )
-            ),
-        )
 
-        async for event in stream_agent_response(agent_context, result):
-            yield event
+                async for event in stream_agent_response(agent_context, result):
+                    yield event
+                    
+        except InputGuardrailTripwireTriggered as e:
+            # Guardrail blocked the request - provide friendly rejection
+            suggested = e.guardrail_result.output_info.get("suggested_response") if e.guardrail_result.output_info else None
+            
+            if suggested:
+                response_text = suggested
+            else:
+                # Default friendly rejection in Jason's voice
+                response_text = (
+                    "Yo, I appreciate the question but that's outside my expertise. "
+                    "I'm here to help with social media marketing, viral content, "
+                    "and growing your brand. What can I help you with on that front?"
+                )
+            
+            print(f"[Guardrail] Blocked off-topic request for thread {thread.id}: {e.guardrail_result.output_info.get('reasoning', 'No reason provided')}")
+            
+            # Send rejection message through ChatKit
+            from chatkit.types import AssistantMessageItem
+            import uuid
+            from datetime import datetime, timezone
+            
+            rejection_item = AssistantMessageItem(
+                id=str(uuid.uuid4()),
+                role="assistant",
+                content=[{"type": "text", "text": response_text}],
+                created_at=datetime.now(timezone.utc),
+            )
+            
+            # Add to thread items
+            await self.store.add_thread_item(thread.id, rejection_item, context)
+            
+            # Yield the rejection as an event
+            yield ThreadStreamEvent(
+                type="thread.item.created",
+                item=rejection_item,
+            )
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
         raise RuntimeError("File attachments are not supported in this demo.")

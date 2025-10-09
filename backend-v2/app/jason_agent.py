@@ -6,6 +6,8 @@ from agents import Agent
 from agents.models.openai_responses import FileSearchTool, WebSearchTool
 from chatkit.agents import AgentContext
 
+from .guardrails import topic_guardrail
+
 JASON_VECTOR_STORE_ID = os.getenv("JASON_VECTOR_STORE_ID", "vs_68e6b33ec38481919601875ea1e2287c")
 
 JASON_INSTRUCTIONS = """
@@ -227,6 +229,11 @@ Avoid formal intros like "Hello, today I will explain…" — always jump straig
 
 
 def build_file_search_tool() -> FileSearchTool:
+    """
+    Enhanced file search with better result quality.
+    - include_search_results: Get raw search results for better context
+    - ranking_options: Filter low-quality results with score threshold
+    """
     if not JASON_VECTOR_STORE_ID:
         raise RuntimeError(
             "JASON_VECTOR_STORE_ID is not set. Please set it to your vector store ID."
@@ -234,6 +241,25 @@ def build_file_search_tool() -> FileSearchTool:
     return FileSearchTool(
         vector_store_ids=[JASON_VECTOR_STORE_ID],
         max_num_results=10,
+        include_search_results=True,  # ✨ Get raw search results
+        ranking_options={              # ✨ Control ranking quality
+            "ranker": "auto",
+            "score_threshold": 0.5,   # Filter low-quality results
+        }
+    )
+
+
+def build_web_search_tool() -> WebSearchTool:
+    """
+    Enhanced web search with location awareness for better results.
+    """
+    return WebSearchTool(
+        user_location={                # ✨ Better localization
+            "type": "approximate",
+            "city": "Miami",           # Jason's location
+            "country": "US"
+        },
+        max_results=5,                 # ✨ Limit results
     )
 
 
@@ -241,6 +267,7 @@ jason_agent = Agent[AgentContext](
     model="gpt-4o-mini",  # 🔥 33x cheaper + 2x faster than gpt-4o
     name="Jason Cooperson - Social Media Marketing Expert",
     instructions=JASON_INSTRUCTIONS,
-    tools=[build_file_search_tool(), WebSearchTool()],  # File search + native web search
+    tools=[build_file_search_tool(), build_web_search_tool()],  # ✨ Enhanced tools
+    input_guardrails=[topic_guardrail],  # ✨ Protect against off-topic requests
 )
 
