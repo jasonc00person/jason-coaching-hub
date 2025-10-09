@@ -163,34 +163,25 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     # Log tool events and extract info (per Agent SDK docs pattern)
                     if event_type == "run_item_stream_event":
                         if event.name == "tool_called":
-                            # Debug: print all attributes to find the right one
-                            print(f"[DEBUG] ToolCallItem attributes: {dir(event.item)}")
-                            print(f"[DEBUG] ToolCallItem type: {type(event.item)}")
-                            print(f"[DEBUG] Event item: {event.item}")
+                            # Extract tool name from raw_item.type
+                            # Format: 'file_search_call' or 'web_search_call'
+                            raw_tool_type = getattr(event.item.raw_item, 'type', 'unknown_tool_call')
                             
-                            # Try multiple possible attribute names
-                            tool_name = (
-                                getattr(event.item, 'tool_name', None) or
-                                getattr(event.item, 'name', None) or
-                                getattr(event.item, 'function', {}).get('name', None) or
-                                'unknown_tool'
-                            )
-                            args = getattr(event.item, 'arguments', {})
+                            # Convert 'file_search_call' -> 'file_search'
+                            tool_name = raw_tool_type.replace('_call', '')
+                            
+                            # Extract queries/args if available
+                            queries = getattr(event.item.raw_item, 'queries', None)
+                            tool_id = getattr(event.item.raw_item, 'id', None)
                             
                             print(f"🔧 Tool Called: {tool_name}")
-                            print(f"   Args: {args}")
+                            print(f"   Tool ID: {tool_id}")
+                            if queries:
+                                print(f"   Queries: {queries}")
                             
-                            # Emit a ChatKit progress event (if ProgressUpdateEvent is available)
-                            if ProgressUpdateEvent:
-                                friendly_msg = self._get_tool_progress_message(tool_name, "running")
-                                progress_event = {
-                                    "type": "progress_update",
-                                    "id": str(uuid.uuid4()),
-                                    "status": "in_progress",
-                                    "message": friendly_msg
-                                }
-                                # Note: We might need to yield this as a ChatKit event
-                                print(f"[Progress] {friendly_msg}")
+                            # Get user-friendly message
+                            friendly_msg = self._get_tool_progress_message(tool_name, "running")
+                            print(f"[Progress] {friendly_msg}")
                             
                         elif event.name == "tool_output":
                             output = getattr(event.item, 'output', '')
