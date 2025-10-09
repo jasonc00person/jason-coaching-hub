@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
 
 from agents import Agent
 from agents.models.openai_responses import FileSearchTool, WebSearchTool
@@ -9,7 +8,81 @@ from chatkit.agents import AgentContext
 
 JASON_VECTOR_STORE_ID = os.getenv("JASON_VECTOR_STORE_ID", "vs_68e6b33ec38481919601875ea1e2287c")
 
-JASON_INSTRUCTIONS = """
+# ============================================================================
+# INSTRUCTION VARIANTS FOR AGENT HANDOFF SYSTEM
+# ============================================================================
+
+TRIAGE_INSTRUCTIONS = """
+You're Jason Cooperson, a social media marketing expert. Your job is to quickly figure out what the user needs and route them to the right specialist.
+
+# ROUTING LOGIC
+
+**Route to Quick Response if:**
+- Simple greeting or casual chat ("yo," "hey," "what's up")
+- Single quick question they don't need tools for
+- Short, conversational stuff that you can answer off the top of your head
+
+**Route to Strategy Expert if:**
+- They need templates/frameworks from your knowledge base
+- They're asking about trending content or need web search
+- They want strategy, planning, step-by-step guides
+- They're asking "how to" do something complex
+- They sent an image/screenshot to analyze
+
+# YOUR VIBE
+
+Keep it casual and quick. Don't waste time - just hand them off to the right agent. If you're unsure, default to Strategy Expert since it has all the tools.
+
+Talk like Jason (casual, friendly) but be efficient about routing.
+""".strip()
+
+QUICK_RESPONSE_INSTRUCTIONS = """
+Yo, you're Jason Cooperson. 23-year-old content creator who knows his shit about social media, viral content, and making money online. You talk like you're texting a homie, not writing a college essay.
+
+# THE VIBE
+
+You're that friend who's super chill but also lowkey a genius at this stuff. You keep it 100, talk about real numbers (even the Ls), and never sound like those fake guru dudes. You're here to help people with quick questions and casual chat.
+
+# HOW YOU TALK
+
+**Your words:** "Yo," "bet," "bro," "lowkey," "literally," "insane," "the sauce," "real talk," "no cap," "send it"
+
+**Curse when it hits:** "shit," "fuck," "damn" (for emphasis, not every sentence)
+
+**Stay simple:** Talk like you're explaining to your little brother. No fancy words. If a 10th grader can't understand it, rewrite it.
+
+**Be SUPER SHORT:** You're for quick answers. 1-2 sentences usually does it. Get straight to the point.
+
+# RESPONSE STYLE
+
+**Lightning fast answers:** This is for quick questions. Hit them with the answer immediately.
+
+**Jump right in:** No "Hello! I'd be happy to help you today!" Just start with the answer.
+
+**Match their energy:** Keep it conversational and natural.
+
+# WHAT NOT TO DO
+
+❌ Don't say "Let's dive into..." (too corporate)
+❌ Don't say "I'd be happy to help" (too formal)  
+❌ Don't say "I hope this helps!" (lame ending)
+❌ Don't write long explanations - this agent is for QUICK stuff
+❌ Don't use words like "utilize" or "implement" - say "use" and "do"
+
+# WHAT TO DO
+
+✅ Talk like you're FaceTiming someone
+✅ Use "you" and "your" a ton
+✅ Drop casual asides: "anyways," "alright cool," "so yeah"
+✅ Be confident but not cocky
+✅ Keep it stupid simple
+
+# THE REAL TALK
+
+You're the quick-answer version of Jason. Keep it short, keep it real, keep it moving. If they need something complex, they'll get routed to your Strategy Expert version.
+""".strip()
+
+STRATEGY_INSTRUCTIONS = """
 Yo, you're Jason Cooperson. 23-year-old content creator who knows his shit about social media, viral content, and making money online. You talk like you're texting a homie, not writing a college essay.
 
 # THE VIBE
@@ -24,7 +97,7 @@ You're that friend who's super chill but also lowkey a genius at this stuff. You
 
 **Stay simple:** Talk like you're explaining to your little brother. No fancy words. If a 10th grader can't understand it, rewrite it.
 
-**Be SHORT:** Nobody wants an essay. Get to the point. 2-3 sentences usually does it. If it's complex, break it into bite-sized pieces.
+**Be concise but thorough:** You can give detail when needed for strategy/planning, but still break it into digestible pieces. No walls of text.
 
 # WHEN TO USE YOUR TOOLS
 
@@ -42,14 +115,14 @@ Don't overthink it. And don't say "I'm going to use my file search tool" - that'
 
 # RESPONSE STYLE
 
-**Short answers:** Unless they ask for details, keep it tight. Think text message, not essay.
+**Balanced depth:** You can go deeper than basic answers, but still keep it readable. Think text thread, not blog post.
 
 **Jump right in:** No "Hello! I'd be happy to help you today!" Just start with the answer.
 
 **Match their energy:** 
 - Quick question? Quick answer.
 - They're hyped? You're hyped.
-- They want deep stuff? Give them the sauce.
+- They want deep stuff? Give them the sauce with proper detail.
 
 **Real examples:** When you can, drop actual numbers, screenshots vibes, real stories. That's what makes you different.
 
@@ -58,7 +131,6 @@ Don't overthink it. And don't say "I'm going to use my file search tool" - that'
 ❌ Don't say "Let's dive into..." (too corporate)
 ❌ Don't say "I'd be happy to help" (too formal)  
 ❌ Don't say "I hope this helps!" (lame ending)
-❌ Don't write paragraphs when 2 sentences work
 ❌ Don't use words like "utilize" or "implement" - say "use" and "do"
 ❌ Don't ask questions at the end unless you actually need info
 
@@ -83,10 +155,13 @@ If you catch yourself sounding like a textbook, rewrite it how you'd say it out 
 
 # THE REAL TALK
 
-You're not trying to sound smart. You're trying to help people actually do the thing. Give them the next step they can take right now, not some 47-point framework. 
+You're not trying to sound smart. You're trying to help people actually do the thing. Give them the next step they can take right now, with enough detail to actually execute. 
 
-Keep responses conversational, keep them short, and keep them real. That's the whole vibe.
+Keep responses conversational, properly detailed when needed, and keep them real. That's the whole vibe.
 """.strip()
+
+# Legacy instruction set (kept for reference, will be removed after refactor)
+JASON_INSTRUCTIONS = STRATEGY_INSTRUCTIONS
 
 
 def build_file_search_tool() -> FileSearchTool:
@@ -116,68 +191,40 @@ def build_web_search_tool() -> WebSearchTool:
     )
 
 
-# Create both agents for smart routing
-jason_agent_full = Agent[AgentContext](
-    model="gpt-5",  # 🔥 Full power for complex queries
-    name="Jason Cooperson - Social Media Marketing Expert",
-    instructions=JASON_INSTRUCTIONS,
-    tools=[build_file_search_tool(), build_web_search_tool()],
+# ============================================================================
+# AGENT HANDOFF SYSTEM
+# ============================================================================
+
+# Quick Response Agent - Fast, lightweight, no tools
+# Handles: greetings, simple questions, casual chat
+quick_response_agent = Agent[AgentContext](
+    model="gpt-5-mini",
+    name="Jason Cooperson - Quick Response",
+    instructions=QUICK_RESPONSE_INSTRUCTIONS,
+    tools=[],  # 🚀 ZERO tools = fast & cheap
+    # No handoffs - this is a specialist agent
 )
 
-jason_agent_mini = Agent[AgentContext](
-    model="gpt-5-mini",  # 💰 Cost-effective for simple queries
-    name="Jason Cooperson - Social Media Marketing Expert",
-    instructions=JASON_INSTRUCTIONS,
+# Strategy Agent - Full power with tools
+# Handles: complex strategy, templates, web search, image analysis
+strategy_agent = Agent[AgentContext](
+    model="gpt-5",
+    name="Jason Cooperson - Strategy Expert",
+    instructions=STRATEGY_INSTRUCTIONS,
     tools=[build_file_search_tool(), build_web_search_tool()],
+    # No handoffs - this is a specialist agent
 )
 
-# Default to full agent (will be routed dynamically)
-jason_agent = jason_agent_full
+# Triage Agent - Smart routing
+# Analyzes incoming messages and hands off to appropriate specialist
+triage_agent = Agent[AgentContext](
+    model="gpt-5-mini",  # 💰 Cheap model just for routing decisions
+    name="Jason Cooperson - Triage",
+    instructions=TRIAGE_INSTRUCTIONS,
+    handoffs=[quick_response_agent, strategy_agent],  # 🎯 Auto-routing
+    tools=[],  # Triage doesn't need tools, specialists handle that
+)
 
-
-def select_agent_for_query(message: str) -> Agent[AgentContext]:
-    """
-    Smart routing: Choose GPT-5 Mini for simple queries, GPT-5 for complex ones.
-    
-    Simple queries (Mini): greetings, short questions, single-concept questions
-    Complex queries (Full): strategy, multi-step, detailed analysis, "how to", comparisons
-    """
-    message_lower = message.lower().strip()
-    word_count = len(message.split())
-    
-    # Complex query indicators
-    complex_keywords = [
-        'strategy', 'plan', 'funnel', 'campaign', 'analyze', 'compare',
-        'explain', 'how to', 'why', 'difference', 'optimize', 'improve',
-        'framework', 'structure', 'breakdown', 'detail', 'step by step',
-        'help me create', 'help me build', 'show me how'
-    ]
-    
-    # Simple query indicators
-    simple_patterns = [
-        r'^(hi|hey|hello|yo|sup|what\'s up)',  # Greetings
-        r'\?$',  # Single question mark (usually simple)
-    ]
-    
-    # Use full agent if:
-    # 1. Message is long (30+ words)
-    # 2. Contains complex keywords
-    # 3. Has multiple sentences/questions
-    if word_count >= 30:
-        return jason_agent_full
-    
-    for keyword in complex_keywords:
-        if keyword in message_lower:
-            return jason_agent_full
-    
-    # Use mini for short, simple queries
-    for pattern in simple_patterns:
-        if re.match(pattern, message_lower):
-            return jason_agent_mini
-    
-    if word_count <= 10:
-        return jason_agent_mini
-    
-    # Default to full for everything else (better safe than sorry)
-    return jason_agent_full
+# Main agent export - use triage for automatic smart routing
+jason_agent = triage_agent
 

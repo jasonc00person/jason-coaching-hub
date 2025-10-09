@@ -36,7 +36,7 @@ import tempfile
 import base64
 import mimetypes
 
-from .jason_agent import jason_agent, JASON_VECTOR_STORE_ID, select_agent_for_query
+from .jason_agent import jason_agent, JASON_VECTOR_STORE_ID
 from .memory_store import MemoryStore
 
 
@@ -232,10 +232,8 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         # Get SQLiteSession for this thread (for agent memory)
         session = self._get_session(thread.id)
         
-        # 🎯 Smart routing: Use GPT-5 Mini for simple queries, GPT-5 for complex ones
-        selected_agent = select_agent_for_query(message_text or "image analysis")
-        model_name = "GPT-5" if selected_agent.model == "gpt-5" else "GPT-5 Mini"
-        print(f"[Routing] Using {model_name} for query: '{message_text[:50] if message_text else 'image/file'}...'")
+        # 🎯 Using handoff-based routing: Triage agent automatically routes to Quick Response or Strategy
+        print(f"[Handoff System] Processing query: '{message_text[:50] if message_text else 'image/file'}...'")
 
         agent_context = AgentContext(
             thread=thread,
@@ -259,7 +257,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             use_session = None if attachment_ids else session
             
             result = Runner.run_streamed(
-                selected_agent,  # 🎯 Dynamically selected agent
+                self.assistant,  # 🎯 Triage agent with automatic handoffs
                 agent_input,  # 🖼️ Now includes attachments!
                 context=agent_context,
                 session=use_session,  # ✨ Disable session for image messages (Agent SDK limitation)
@@ -374,12 +372,12 @@ async def root() -> dict[str, Any]:
     return {
         "message": "Jason's Coaching ChatKit API",
         "status": "running",
-        "model": "GPT-5 with smart routing (GPT-5 Mini for simple queries)",
+        "model": "GPT-5 with agent handoffs (automatic routing between Quick Response and Strategy agents)",
         "features": [
+            "Agent handoffs (automatic triage routing)",
             "Image analysis (vision)",
             "Voice transcription (Whisper)",
             "Text-to-speech (TTS)",
-            "Smart model routing",
             "Extended context (400k tokens)",
             "Reasoning control",
             "Parallel tool calls",
