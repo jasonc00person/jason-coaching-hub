@@ -89,14 +89,6 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         )
 
         async for event in stream_agent_response(agent_context, result):
-            # Log events during development for debugging
-            if os.getenv("DEBUG"):
-                event_type = type(event).__name__
-                print(f"[Stream Event] Type: {event_type}")
-                if hasattr(event, 'type'):
-                    print(f"[Stream Event] Event.type: {event.type}")
-                if hasattr(event, 'tool_name'):
-                    print(f"[Stream Event] Tool: {event.tool_name}")
             yield event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:

@@ -1,13 +1,15 @@
 {
-  "buildCommand": "rm -rf node_modules package-lock.json && npm install && npm run build",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "VITE_CHATKIT_API_DOMAIN_KEY": "@chatkit_domain_key"
+  }
 }
 

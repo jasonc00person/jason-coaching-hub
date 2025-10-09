@@ -6,11 +6,7 @@ FastAPI backend for Jason's AI Coaching Hub powered by OpenAI ChatKit.
 
 ```bash
 OPENAI_API_KEY=your_openai_api_key_here
-TAVILY_API_KEY=your_tavily_api_key_here
-JASON_VECTOR_STORE_ID=your_vector_store_id_here
 ```
-
-Get your Tavily API key from: https://tavily.com
 
 ## Local Development
 

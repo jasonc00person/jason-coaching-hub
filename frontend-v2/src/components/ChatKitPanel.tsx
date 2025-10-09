@@ -24,7 +24,6 @@ const getOrCreateSessionId = (): string => {
 
 export function ChatKitPanel({ theme }: ChatKitPanelProps) {
   const [integrationError, setIntegrationError] = useState<string | null>(null);
-  const [toolActivity, setToolActivity] = useState<string[]>([]);
   const isMounted = useRef(true);
   // Get session ID immediately - don't wait for useEffect
   const sessionId = useRef(getOrCreateSessionId()).current;
@@ -76,39 +75,24 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
       },
     },
     threadItemActions: {
-      feedback: true, // Enable feedback on responses and tool calls
-      retry: true,    // Allow retry of failed operations
+      feedback: false,
     },
     onThreadChange: () => {
       if (import.meta.env.DEV) {
         console.debug("[ChatKitPanel] Thread changed");
       }
     },
-    onResponseEnd: (response: any) => {
+    onResponseEnd: (response) => {
       if (import.meta.env.DEV) {
         console.debug("[ChatKitPanel] Response ended", response);
-        console.log("[ChatKit] Tool calls made:", response.tool_calls);
-        console.log("[ChatKit] Citations:", response.citations);
-        
-        // Log tool activity
-        if (response.tool_calls && response.tool_calls.length > 0) {
-          response.tool_calls.forEach((tool: any) => {
-            setToolActivity(prev => [...prev, `✓ ${tool.type || 'Tool'}: ${tool.function?.name || 'unknown'}`]);
-          });
-          
-          // Clear after 3 seconds
-          setTimeout(() => {
-            setToolActivity([]);
-          }, 3000);
-        }
+        // Citations from File Search are automatically displayed by ChatKit
       }
     },
     onError: ({ error }) => {
-      // Always log errors to console with enhanced detail
+      // Always log errors to console
       console.error("[ChatKitPanel] ChatKit error:", error);
       console.error("[ChatKitPanel] Error message:", error?.message);
       console.error("[ChatKitPanel] Error stack:", error?.stack);
-      console.error("[ChatKitPanel] Full error object:", JSON.stringify(error, null, 2));
       
       if (isMounted.current) {
         // Show error message to user
@@ -120,23 +104,6 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
 
   return (
     <div className="flex-1 relative w-full overflow-hidden bg-[#0f0f0f]" style={{ minHeight: 0 }}>
-      {/* Tool Activity Overlay - Shows real-time tool execution */}
-      {import.meta.env.DEV && toolActivity.length > 0 && (
-        <div className="absolute top-4 right-4 z-50 bg-gradient-to-br from-blue-900/90 to-purple-900/90 backdrop-blur-md border border-blue-500/30 rounded-xl p-4 shadow-2xl max-w-xs animate-in slide-in-from-top">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="animate-pulse">⚡</div>
-            <div className="font-semibold text-blue-100 text-sm">Agent Activity</div>
-          </div>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {toolActivity.slice(-5).map((activity, i) => (
-              <div key={i} className="text-xs text-blue-200 bg-black/20 rounded px-2 py-1 animate-in fade-in">
-                {activity}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
       {integrationError && (
         <div className="absolute top-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-20 sm:max-w-md safe-top">
           <div className="bg-red-900/95 backdrop-blur-sm border border-red-700/50 rounded-xl p-4 shadow-2xl">
