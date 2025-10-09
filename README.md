@@ -4,8 +4,8 @@ AI-powered coaching assistant built with OpenAI ChatKit and Agents SDK, providin
 
 ## 🚀 Live Demo
 
-**Frontend**: https://jason-coaching-hub.vercel.app/  
-**Backend**: Railway (private)
+**Frontend**: https://jason-coaching-hub.vercel.app/ (Vercel)  
+**Backend**: https://jason-coaching-backend-production.up.railway.app/ (Railway - private)
 
 ## 📁 Project Structure
 
@@ -105,10 +105,10 @@ uvicorn app.main:app --reload
 
 ## 📚 Documentation
 
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - Complete deployment guide (Vercel + Railway)
 - [CHANGELOG.md](./CHANGELOG.md) - Version history and changes
-- [VERCEL_MIGRATION.md](./VERCEL_MIGRATION.md) - Detailed deployment guide
-- [backend-v2/README.md](./backend-v2/README.md) - Backend documentation
-- [frontend-v2/DEPLOYMENT.md](./frontend-v2/DEPLOYMENT.md) - Frontend deployment
+- [backend-v2/README.md](./backend-v2/README.md) - Backend API documentation
+- [frontend-v2/DEPLOYMENT.md](./frontend-v2/DEPLOYMENT.md) - Frontend-specific deployment
 
 ## 🤝 Contributing
 
