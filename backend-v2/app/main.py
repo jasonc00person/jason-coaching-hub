@@ -313,7 +313,14 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 yield chatkit_event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
-        """Convert attachment to format Agent SDK expects (images and text files)."""
+        """
+        Convert attachment to format Agent SDK expects.
+        
+        Supported formats:
+        - Images (image/*): Converted to base64 data URLs
+        - Text files (text/*, .json, .md, .txt): Inline as input_text
+        - Documents (PDF, DOCX): Uploaded to OpenAI and referenced by file_id
+        """
         if DEBUG_MODE:
             print(f"[to_message_content] Converting attachment {input.id} to message content")
         
@@ -330,34 +337,17 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         
         mime_type = attachment_data["mime_type"]
         data_bytes = attachment_data.get("data")
+        filename = attachment_data.get("name", "unnamed")
         
         if DEBUG_MODE:
-            print(f"[to_message_content] Attachment MIME type: {mime_type}")
+            print(f"[to_message_content] Attachment MIME type: {mime_type}, filename: {filename}")
         
         if not data_bytes:
             print(f"[to_message_content] ERROR: No data bytes for attachment {input.id}")
             raise RuntimeError(f"No data bytes for attachment {input.id}")
         
-        # Handle text files (markdown, txt, etc.)
-        if mime_type and (mime_type.startswith("text/") or mime_type in ["application/json"]):
-            try:
-                text_content = data_bytes.decode("utf-8")
-                if DEBUG_MODE:
-                    print(f"[to_message_content] Decoded text file, length: {len(text_content)} chars")
-                
-                # Return as input_text with filename context
-                result = {
-                    "type": "input_text",
-                    "text": f"File: {attachment_data['name']}\n\n{text_content}"
-                }
-                if DEBUG_MODE:
-                    print(f"[to_message_content] Returning Agent SDK format: type=input_text")
-                return result
-            except UnicodeDecodeError:
-                raise RuntimeError(f"Failed to decode text file: {attachment_data['name']}")
-        
-        # Handle images
-        elif mime_type and mime_type.startswith("image/"):
+        # Handle images - inline as base64
+        if mime_type and mime_type.startswith("image/"):
             base64_image = base64.b64encode(data_bytes).decode("utf-8")
             if DEBUG_MODE:
                 print(f"[to_message_content] Encoded image to base64, length: {len(base64_image)}")
@@ -365,7 +355,6 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             # Build data URL as per Agent SDK docs
             data_url = f"data:{mime_type};base64,{base64_image}"
             
-            # Return in Agent SDK format: ResponseInputImageParam
             result = {
                 "type": "input_image",
                 "detail": "auto",
@@ -375,8 +364,86 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 print(f"[to_message_content] Returning Agent SDK format: type=input_image")
             return result
         
+        # Handle simple text files - inline as text
+        elif mime_type and (mime_type.startswith("text/") or mime_type in ["application/json"]):
+            try:
+                text_content = data_bytes.decode("utf-8")
+                if DEBUG_MODE:
+                    print(f"[to_message_content] Decoded text file, length: {len(text_content)} chars")
+                
+                # Return as input_text with filename context
+                result = {
+                    "type": "input_text",
+                    "text": f"File: {filename}\n\n{text_content}"
+                }
+                if DEBUG_MODE:
+                    print(f"[to_message_content] Returning Agent SDK format: type=input_text")
+                return result
+            except UnicodeDecodeError:
+                raise RuntimeError(f"Failed to decode text file: {filename}")
+        
+        # Handle PDFs, DOCX, and other documents - upload to OpenAI
+        elif mime_type in [
+            "application/pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+            "application/msword",  # .doc
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
+            "application/vnd.ms-excel",  # .xls
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",  # .pptx
+        ]:
+            if DEBUG_MODE:
+                print(f"[to_message_content] Document type detected: {mime_type}")
+                print(f"[to_message_content] Uploading to OpenAI for file_search...")
+            
+            try:
+                # Get file extension
+                file_ext = os.path.splitext(filename)[1] or ".pdf"
+                
+                # Create temporary file
+                with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
+                    tmp.write(data_bytes)
+                    tmp_path = tmp.name
+                
+                try:
+                    # Upload to OpenAI with purpose="assistants"
+                    with open(tmp_path, "rb") as f:
+                        openai_file = openai_client.files.create(
+                            file=f,
+                            purpose="assistants"
+                        )
+                    
+                    if DEBUG_MODE:
+                        print(f"[to_message_content] Uploaded to OpenAI, file_id: {openai_file.id}")
+                    
+                    # Return as input_text with a note about the uploaded file
+                    # The file_search tool will automatically access it via the agent's vector store
+                    result = {
+                        "type": "input_text",
+                        "text": f"[Document attached: {filename}]\n\nPlease analyze the attached {mime_type.split('/')[-1]} document."
+                    }
+                    
+                    if DEBUG_MODE:
+                        print(f"[to_message_content] Returning document reference")
+                    
+                    return result
+                    
+                finally:
+                    # Clean up temp file
+                    try:
+                        os.unlink(tmp_path)
+                    except Exception as e:
+                        print(f"[to_message_content] Warning: Failed to delete temp file: {e}")
+                        
+            except Exception as e:
+                print(f"[to_message_content] ERROR uploading document: {e}")
+                raise RuntimeError(f"Failed to process document {filename}: {str(e)}")
+        
         else:
-            raise RuntimeError(f"Unsupported attachment type: {mime_type}. Supported: images (image/*) and text files (text/*, application/json)")
+            raise RuntimeError(
+                f"Unsupported attachment type: {mime_type} ({filename}). "
+                f"Supported: images (image/*), text files (text/*, .json), "
+                f"and documents (.pdf, .docx, .xlsx, .pptx)"
+            )
 
 
 jason_server = JasonCoachingServer(agent=jason_agent)
@@ -440,6 +507,9 @@ async def root() -> dict[str, Any]:
         "features": [
             "Agent handoffs (automatic triage routing)",
             "Image analysis (vision)",
+            "Document processing (PDF, DOCX, XLSX, PPTX)",
+            "File attachments (images, text, code files)",
+            "Knowledge base (vector search)",
             "Voice transcription (Whisper)",
             "Text-to-speech (TTS)",
             "Extended context (400k tokens)",
@@ -461,9 +531,16 @@ async def root() -> dict[str, Any]:
             "session": "/api/chatkit/session",
             "health": "/health",
             "files": {
-                "list": "GET /api/files",
-                "upload": "POST /api/files/upload",
-                "delete": "DELETE /api/files/{file_id}"
+                "list": "GET /api/files - List all files in knowledge base",
+                "upload": "POST /api/files/upload - Upload documents to knowledge base (PDF, DOCX, TXT, MD, CSV, XLSX, PPTX, code files)",
+                "delete": "DELETE /api/files/{file_id} - Remove file from knowledge base",
+                "supported_types": [
+                    "Documents: .pdf, .docx, .doc, .txt, .md",
+                    "Spreadsheets: .csv, .xlsx",
+                    "Presentations: .pptx",
+                    "Code: .py, .js, .ts, .java, .cpp, .c, .cs, .go, .rb, .php, .sh, .css, .tex",
+                    "Data: .json, .xml, .html"
+                ]
             },
             "voice": {
                 "transcribe": "POST /api/voice/transcribe",
@@ -536,6 +613,108 @@ async def list_files() -> dict[str, Any]:
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list files: {str(e)}")
+
+
+@app.post("/api/files/upload")
+async def upload_file_to_knowledge_base(file: UploadFile = File(...)) -> dict[str, Any]:
+    """
+    Upload a file to the OpenAI vector store for knowledge base search.
+    Supports: PDF, DOCX, TXT, MD, CSV, PPTX, and more.
+    
+    This is different from chat attachments - these files are permanently added
+    to the knowledge base and can be searched via file_search tool.
+    """
+    try:
+        if not JASON_VECTOR_STORE_ID:
+            raise HTTPException(
+                status_code=400,
+                detail="Vector store not configured. Set JASON_VECTOR_STORE_ID environment variable."
+            )
+        
+        print(f"[Knowledge Base Upload] Starting upload: {file.filename}")
+        print(f"[Knowledge Base Upload] Content-Type: {file.content_type}")
+        
+        # Validate file type
+        allowed_extensions = {
+            '.pdf', '.txt', '.md', '.doc', '.docx', 
+            '.csv', '.xlsx', '.pptx',
+            '.c', '.cpp', '.cs', '.css', '.go', '.html', 
+            '.java', '.js', '.json', '.php', '.py', '.rb', 
+            '.sh', '.tex', '.ts', '.xml'
+        }
+        
+        file_ext = os.path.splitext(file.filename or "")[1].lower()
+        if file_ext not in allowed_extensions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type: {file_ext}. Supported types: {', '.join(sorted(allowed_extensions))}"
+            )
+        
+        # Read file content
+        content = await file.read()
+        file_size_mb = len(content) / (1024 * 1024)
+        print(f"[Knowledge Base Upload] File size: {file_size_mb:.2f} MB")
+        
+        # Check file size (OpenAI limit is typically 512MB for assistants)
+        if len(content) > 512 * 1024 * 1024:
+            raise HTTPException(
+                status_code=400,
+                detail="File size exceeds 512MB limit"
+            )
+        
+        # Create a temporary file to upload to OpenAI
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+        
+        try:
+            # Step 1: Upload file to OpenAI with purpose="assistants"
+            print(f"[Knowledge Base Upload] Uploading to OpenAI storage...")
+            with open(tmp_path, "rb") as f:
+                openai_file = openai_client.files.create(
+                    file=f,
+                    purpose="assistants"
+                )
+            
+            print(f"[Knowledge Base Upload] OpenAI file ID: {openai_file.id}")
+            
+            # Step 2: Add file to vector store
+            print(f"[Knowledge Base Upload] Adding to vector store {JASON_VECTOR_STORE_ID}...")
+            vector_store_file = openai_client.beta.vector_stores.files.create(
+                vector_store_id=JASON_VECTOR_STORE_ID,
+                file_id=openai_file.id
+            )
+            
+            print(f"[Knowledge Base Upload] Successfully added to vector store")
+            print(f"[Knowledge Base Upload] Vector store file status: {vector_store_file.status}")
+            
+            return {
+                "success": True,
+                "file_id": openai_file.id,
+                "filename": file.filename,
+                "bytes": len(content),
+                "status": vector_store_file.status,
+                "vector_store_id": JASON_VECTOR_STORE_ID,
+                "message": f"File '{file.filename}' uploaded successfully and is being indexed."
+            }
+            
+        finally:
+            # Clean up temp file
+            try:
+                os.unlink(tmp_path)
+            except Exception as e:
+                print(f"[Knowledge Base Upload] Warning: Failed to delete temp file: {e}")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Knowledge Base Upload] ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload file to knowledge base: {str(e)}"
+        )
 
 
 @app.options("/upload/{attachment_id}")

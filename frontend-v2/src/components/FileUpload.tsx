@@ -109,7 +109,7 @@ export function FileUpload({ onUploadSuccess }: FileUploadProps) {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.txt,.md,.doc,.docx"
+          accept=".pdf,.txt,.md,.doc,.docx,.csv,.xlsx,.pptx,.json,.html,.xml,.py,.js,.ts,.java,.cpp,.c,.cs,.go,.rb,.php,.sh,.css,.tex"
           onChange={(e) => handleFileSelect(e.target.files)}
           className="hidden"
         />
@@ -140,7 +140,7 @@ export function FileUpload({ onUploadSuccess }: FileUploadProps) {
             or drag and drop
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-500">
-            PDF, TXT, MD, DOC up to 10MB
+            PDF, DOCX, TXT, MD, CSV, XLSX, PPTX, code files, and more (up to 512MB)
           </p>
         </div>
       </div>
