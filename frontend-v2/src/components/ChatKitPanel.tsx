@@ -52,7 +52,23 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
     api: { 
       url: `${CHATKIT_API_URL}?sid=${sessionId}`, 
       domainKey: CHATKIT_API_DOMAIN_KEY,
-      uploadStrategy: "chatkit" // Use ChatKit's built-in upload handling
+      uploadStrategy: async (file) => {
+        // Upload file to ChatKit backend
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(`${CHATKIT_API_URL}?sid=${sessionId}`, {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('Upload failed');
+        }
+        
+        const data = await response.json();
+        return data;
+      }
     },
     theme: {
       colorScheme: theme,
