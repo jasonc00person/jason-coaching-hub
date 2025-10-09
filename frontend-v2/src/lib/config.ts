@@ -13,12 +13,12 @@ export const CHATKIT_API_URL = import.meta.env.VITE_CHATKIT_API_URL ?? `${API_BA
  * 3. Replace this placeholder with the real domain key from OpenAI
  */
 export const CHATKIT_API_DOMAIN_KEY =
-  import.meta.env.VITE_CHATKIT_API_DOMAIN_KEY ?? "domain_pk_68e6ede3c3808190bac4b60740ab83830ff8c55517d6f3a5";
+  import.meta.env.VITE_CHATKIT_API_DOMAIN_KEY ?? "domain_pk_68e6f82c9e5081908d9b66e3fccbeed801c44e006ad5d8e7";
 
-// API Endpoints
-export const CREATE_SESSION_ENDPOINT = "/api/chatkit/session";
-export const FILES_API_URL = "/api/files";
-export const FILE_UPLOAD_URL = "/api/files/upload";
+// API Endpoints - use full URLs for production
+export const CREATE_SESSION_ENDPOINT = `${API_BASE}api/chatkit/session`;
+export const FILES_API_URL = `${API_BASE}api/files`;
+export const FILE_UPLOAD_URL = `${API_BASE}api/files/upload`;
 
 export const GREETING =
   import.meta.env.VITE_GREETING ??
