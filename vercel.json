@@ -4,31 +4,16 @@
   "installCommand": "cd frontend-v2 && npm install",
   "framework": "vite",
   "functions": {
-    "api/*.py": {
+    "api/index.py": {
       "runtime": "python3.9",
       "maxDuration": 60
     }
   },
-  "routes": [
-    {
-      "src": "/api/chatkit",
-      "dest": "/api/index.py"
-    },
-    {
-      "src": "/api/files/upload",
-      "methods": ["POST"],
-      "dest": "/api/index.py"
-    },
-    {
-      "src": "/api/files/(.*)",
-      "dest": "/api/index.py"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.py"
-    }
-  ],
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
