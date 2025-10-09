@@ -152,21 +152,45 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             # We need to intercept events before they go to stream_agent_response
             # So let's create a wrapper that logs AND forwards
             async def event_logger_and_forwarder():
-                """Log Agent SDK events and forward them for ChatKit processing"""
+                """Log Agent SDK events, emit ChatKit progress updates, and forward"""
                 from agents import ItemHelpers
                 from openai.types.responses import ResponseTextDeltaEvent
+                import uuid
                 
                 async for event in result.stream_events():
                     event_type = event.type
                     
-                    # Log tool events (per Agent SDK docs pattern)
+                    # Log tool events and extract info (per Agent SDK docs pattern)
                     if event_type == "run_item_stream_event":
                         if event.name == "tool_called":
-                            # ToolCallItem might use 'name' or 'tool_name' depending on version
-                            tool_name = getattr(event.item, 'name', None) or getattr(event.item, 'tool_name', 'unknown_tool')
+                            # Debug: print all attributes to find the right one
+                            print(f"[DEBUG] ToolCallItem attributes: {dir(event.item)}")
+                            print(f"[DEBUG] ToolCallItem type: {type(event.item)}")
+                            print(f"[DEBUG] Event item: {event.item}")
+                            
+                            # Try multiple possible attribute names
+                            tool_name = (
+                                getattr(event.item, 'tool_name', None) or
+                                getattr(event.item, 'name', None) or
+                                getattr(event.item, 'function', {}).get('name', None) or
+                                'unknown_tool'
+                            )
                             args = getattr(event.item, 'arguments', {})
+                            
                             print(f"🔧 Tool Called: {tool_name}")
                             print(f"   Args: {args}")
+                            
+                            # Emit a ChatKit progress event (if ProgressUpdateEvent is available)
+                            if ProgressUpdateEvent:
+                                friendly_msg = self._get_tool_progress_message(tool_name, "running")
+                                progress_event = {
+                                    "type": "progress_update",
+                                    "id": str(uuid.uuid4()),
+                                    "status": "in_progress",
+                                    "message": friendly_msg
+                                }
+                                # Note: We might need to yield this as a ChatKit event
+                                print(f"[Progress] {friendly_msg}")
                             
                         elif event.name == "tool_output":
                             output = getattr(event.item, 'output', '')
