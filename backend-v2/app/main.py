@@ -186,7 +186,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                             if ProgressUpdateEvent is not None:
                                 try:
                                     progress_event = ProgressUpdateEvent(
-                                        message=friendly_msg
+                                        text=friendly_msg
                                     )
                                     # Stream progress to ChatKit UI
                                     await agent_context.stream(progress_event)
@@ -208,7 +208,7 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                                 try:
                                     completion_msg = self._get_tool_progress_message(tool_name, "completed")
                                     progress_event = ProgressUpdateEvent(
-                                        message=completion_msg
+                                        text=completion_msg
                                     )
                                     await agent_context.stream(progress_event)
                                     print(f"✅ Streamed completion update to ChatKit: {completion_msg}")
