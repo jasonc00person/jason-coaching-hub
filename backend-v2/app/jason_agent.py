@@ -176,6 +176,6 @@ jason_agent = Agent[AgentContext](
     model="gpt-4o-mini",
     name="Jason Cooperson - Social Media Marketing Expert",
     instructions=JASON_INSTRUCTIONS,
-    tools=[build_file_search_tool(), web_search],
+    tools=[build_file_search_tool()],  # TODO: Add web_search back with proper tool wrapper
 )
 
