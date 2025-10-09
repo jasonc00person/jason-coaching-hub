@@ -64,23 +64,23 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         self.active_tools: dict[str, str] = {}
     
     def _get_tool_progress_message(self, tool_name: str, status: str = "running") -> str:
-        """Convert tool name to user-friendly progress message."""
+        """Convert tool name to user-friendly progress message with icons."""
         tool_messages = {
             "file_search": {
-                "running": "Searching knowledge base...",
-                "completed": "Found relevant content"
+                "running": "🔍 Searching knowledge base...",
+                "completed": "✅ Found relevant content"
             },
             "web_search": {
-                "running": "Searching the web...",
-                "completed": "Found latest information"
+                "running": "🌐 Searching the web...",
+                "completed": "✅ Found latest information"
             },
         }
         
         if tool_name in tool_messages:
-            return tool_messages[tool_name].get(status, f"Using {tool_name}...")
+            return tool_messages[tool_name].get(status, f"🔧 Using {tool_name}...")
         
         # Fallback for unknown tools
-        return f"Using {tool_name}..." if status == "running" else f"Completed {tool_name}"
+        return f"🔧 Using {tool_name}..." if status == "running" else f"✅ Completed {tool_name}"
     
     def _get_session(self, thread_id: str) -> SQLiteSession:
         """Get or create a SQLiteSession for this thread."""
@@ -150,17 +150,16 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             # BUT also log the raw Agent SDK events to see tool calls
             
             # We need to intercept events before they go to stream_agent_response
-            # So let's create a wrapper that logs AND forwards
-            async def event_logger_and_forwarder():
-                """Log Agent SDK events, emit ChatKit progress updates, and forward"""
+            # And emit ChatKit progress updates when tools are called
+            async def event_interceptor():
+                """Intercept Agent SDK events, emit ChatKit progress, and forward to stream_agent_response"""
                 from agents import ItemHelpers
-                from openai.types.responses import ResponseTextDeltaEvent
                 import uuid
                 
                 async for event in result.stream_events():
                     event_type = event.type
                     
-                    # Log tool events and extract info (per Agent SDK docs pattern)
+                    # Detect tool calls and emit progress updates
                     if event_type == "run_item_stream_event":
                         if event.name == "tool_called":
                             # Extract tool name from raw_item.type
@@ -183,10 +182,38 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                             friendly_msg = self._get_tool_progress_message(tool_name, "running")
                             print(f"[Progress] {friendly_msg}")
                             
+                            # Emit ChatKit progress update if available
+                            if ProgressUpdateEvent is not None:
+                                try:
+                                    progress_event = ProgressUpdateEvent(
+                                        message=friendly_msg
+                                    )
+                                    # Stream progress to ChatKit UI
+                                    await agent_context.stream(progress_event)
+                                    print(f"✅ Streamed progress update to ChatKit: {friendly_msg}")
+                                except Exception as e:
+                                    print(f"⚠️  Failed to stream progress update: {e}")
+                            
                         elif event.name == "tool_output":
+                            # Tool completed - emit completion message
+                            raw_tool_type = getattr(event.item.raw_item, 'type', 'unknown_tool_call')
+                            tool_name = raw_tool_type.replace('_call', '').replace('_output', '')
+                            
                             output = getattr(event.item, 'output', '')
                             output_preview = str(output)[:200] if output else 'No output'
                             print(f"✅ Tool Output: {output_preview}...")
+                            
+                            # Emit completion progress message
+                            if ProgressUpdateEvent is not None:
+                                try:
+                                    completion_msg = self._get_tool_progress_message(tool_name, "completed")
+                                    progress_event = ProgressUpdateEvent(
+                                        message=completion_msg
+                                    )
+                                    await agent_context.stream(progress_event)
+                                    print(f"✅ Streamed completion update to ChatKit: {completion_msg}")
+                                except Exception as e:
+                                    print(f"⚠️  Failed to stream completion update: {e}")
                             
                         elif event.name == "message_output_created":
                             try:
@@ -198,8 +225,8 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                     # Forward the event unchanged
                     yield event
             
-            # Create a mock result object that uses our logging wrapper
-            class LoggingResultWrapper:
+            # Create a wrapper for the result that uses our interceptor
+            class EventInterceptorWrapper:
                 def __init__(self, original_result, event_generator):
                     self._original = original_result
                     self._event_gen = event_generator
@@ -210,10 +237,10 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 async def get_final_output(self):
                     return await self._original.get_final_output()
             
-            logged_result = LoggingResultWrapper(result, event_logger_and_forwarder())
+            intercepted_result = EventInterceptorWrapper(result, event_interceptor())
             
             # Now use stream_agent_response which handles ChatKit event conversion
-            async for chatkit_event in stream_agent_response(agent_context, logged_result):
+            async for chatkit_event in stream_agent_response(agent_context, intercepted_result):
                 yield chatkit_event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
