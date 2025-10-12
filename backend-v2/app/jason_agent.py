@@ -228,17 +228,27 @@ async def transcribe_instagram_reel(
         # Extract the transcription from the response
         result = response.json()
         
-        # The response structure from the workflow
-        if isinstance(result, list) and len(result) > 0:
-            # Get the Gemini analysis result
+        # Handle both response formats from n8n
+        # Format 1: Direct dict with content.parts[0].text
+        # Format 2: List with content.parts[0].text at result[0]
+        
+        content = None
+        if isinstance(result, dict):
+            # Direct response format
+            content = result.get("content", {})
+        elif isinstance(result, list) and len(result) > 0:
+            # List response format
             content = result[0].get("content", {})
+        
+        if content:
             parts = content.get("parts", [])
             if parts and len(parts) > 0:
                 transcription = parts[0].get("text", "")
-                return {"result": transcription}
+                if transcription:
+                    return {"result": transcription}
         
         # Fallback if structure is different
-        return {"result": f"Successfully processed reel, but unexpected response format: {str(result)[:500]}"}
+        return {"error": f"Unexpected response format from workflow: {str(result)[:500]}"}
     
     except requests.Timeout:
         return {"error": "The reel transcription is taking longer than expected. This usually happens with very long videos or network issues. Please try again."}
