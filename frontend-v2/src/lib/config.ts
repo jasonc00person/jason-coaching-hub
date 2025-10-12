@@ -3,18 +3,21 @@ import { StartScreenPrompt } from "@openai/chatkit";
 export const THEME_STORAGE_KEY = "jason-coaching-theme";
 
 // Backend API - automatically uses correct environment
-// Production (main branch): uses production Railway URL
-// Staging (dev branch): uses staging Railway URL (set in Vercel environment variables)
+// Production (main branch): uses VITE_API_BASE or production Railway URL
+// Staging (dev branch): uses VITE_API_BASE_1 (Preview env) or VITE_API_BASE
 // Development (local): uses localhost
-const API_BASE = import.meta.env.VITE_API_BASE ?? (
-  import.meta.env.DEV 
+const API_BASE = 
+  import.meta.env.VITE_API_BASE_1 ?? // Check Preview env variable first
+  import.meta.env.VITE_API_BASE ?? // Then Production env variable
+  (import.meta.env.DEV 
     ? "http://localhost:8000/" 
     : "https://jason-coaching-backend-production.up.railway.app/"
-);
+  );
 
 console.log("=== CONFIG.TS LOADED ===");
 console.log("import.meta.env:", import.meta.env);
-console.log("VITE_API_BASE:", import.meta.env.VITE_API_BASE);
+console.log("VITE_API_BASE_1 (Preview):", import.meta.env.VITE_API_BASE_1);
+console.log("VITE_API_BASE (Production):", import.meta.env.VITE_API_BASE);
 console.log("VITE_CHATKIT_API_DOMAIN_KEY:", import.meta.env.VITE_CHATKIT_API_DOMAIN_KEY);
 console.log("Computed API_BASE:", API_BASE);
 
