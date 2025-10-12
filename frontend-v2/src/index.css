@@ -117,16 +117,24 @@ button[aria-label*="History"] {
    🎨 CHATGPT-STYLE THEME
    ============================================ */
 
-/* Main background - ChatGPT dark mode */
+/* Main background - Modern glassmorphism */
 [data-chatkit-root] {
-  background-color: #212121 !important;
+  background-color: transparent !important;
 }
 
-/* Message viewport/container */
+/* Message viewport/container - Glassmorphism effect */
 [data-chatkit-viewport],
 [data-chatkit-messages] {
-  background-color: #212121 !important;
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
   padding: 2rem 1rem !important;
+  box-shadow: 
+    0 45px 90px -45px rgba(15, 23, 42, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+  border-radius: 24px !important;
+  margin: 1rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 /* Center all message bubbles */
@@ -137,19 +145,23 @@ button[aria-label*="History"] {
   padding: 0.75rem 0 !important;
 }
 
-/* User messages - right-aligned bubble */
+/* User messages - right-aligned bubble with glassmorphism */
 [data-chatkit-message][data-role="user"] {
   display: flex !important;
   justify-content: flex-end !important;
 }
 
 [data-chatkit-message][data-role="user"] [data-chatkit-message-content] {
-  background-color: rgba(255, 255, 255, 0.05) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
   color: #eeeeee !important;
   border-radius: 1.5rem !important;
   padding: 0.75rem 1.25rem !important;
   max-width: 70% !important;
   word-wrap: break-word !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px -8px rgba(15, 23, 42, 0.5) !important;
 }
 
 /* Assistant messages - left-aligned with avatar */
@@ -182,14 +194,19 @@ button[aria-label*="History"] {
   flex-shrink: 0 !important;
 }
 
-/* Composer (input area) - ChatGPT style */
+/* Composer (input area) - Glassmorphism style */
 [data-chatkit-composer] {
   max-width: 48rem !important;
   margin: 0 auto 1rem !important;
-  background-color: rgba(255, 255, 255, 0.05) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
   border-radius: 1.5rem !important;
-  border: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   padding: 0.5rem !important;
+  box-shadow: 
+    0 20px 50px -20px rgba(15, 23, 42, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
 }
 
 [data-chatkit-composer-input] {
@@ -274,9 +291,17 @@ p code, li code {
   color: #b4b4b4 !important;
 }
 
-/* Greeting/start screen */
+/* Greeting/start screen - Glassmorphism */
 [data-chatkit-start-screen] {
-  background-color: #212121 !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-radius: 24px !important;
+  margin: 1rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 
+    0 45px 90px -45px rgba(15, 23, 42, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
   color: white !important;
 }
 
@@ -286,19 +311,24 @@ p code, li code {
   font-weight: 400 !important;
 }
 
-/* Starter prompts */
+/* Starter prompts - Glassmorphism cards */
 [data-chatkit-prompt-button] {
-  background-color: rgba(255, 255, 255, 0.05) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
   color: #eeeeee !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 0.75rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 1rem !important;
   padding: 0.75rem 1rem !important;
-  transition: all 0.2s !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 8px 32px -12px rgba(15, 23, 42, 0.4) !important;
 }
 
 [data-chatkit-prompt-button]:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06)) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 48px -16px rgba(15, 23, 42, 0.6) !important;
 }
 
 /* Footer text */
