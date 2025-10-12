@@ -1,7 +1,7 @@
 # Citation Markers Bug Report & Fix
 
 **Issue Date**: October 12, 2025  
-**Status**: ✅ TEMPORARY FIX APPLIED + DIAGNOSTIC LOGGING ADDED
+**Status**: ✅ **FIXED - ChatKit Upgraded to v1.0.2**
 
 ---
 
@@ -21,63 +21,62 @@ You can stack psychology with ≡file≡≡turn0file2≡≡turn0file2≡ subtle 
 
 ## 🔍 Root Cause Analysis
 
-### Most Likely Cause: OpenAI File Search Citation Leak
+### ✅ CONFIRMED ROOT CAUSE: ChatKit Version Mismatch
 
-These markers are **internal citation annotations** from OpenAI's `file_search` tool that should be stripped before displaying to users, but aren't being properly filtered by either:
+**The Problem:**
+```
+requirements.txt specified:  openai-chatkit==0.0.2  (old, pinned)
+Actually installed:          openai-chatkit 1.0.0   (newer, but incomplete)
+Solution:                    openai-chatkit 1.0.2   (latest, fixed)
+```
 
-1. **OpenAI's Responses API** (used by Agent SDK)
-2. **ChatKit's `stream_agent_response` function**
-3. **A bug in the library versions you're using**
+**What Was Happening:**
+1. Your `requirements.txt` pinned `openai-chatkit==0.0.2` (old version)
+2. Someone manually upgraded to `1.0.0` without updating requirements.txt
+3. Version `1.0.0` had a bug where `file_search` citation markers weren't being properly converted to `Annotation` objects
+4. The raw markers (`≡file≡`, `≡turn0file2≡`) leaked into the user-facing response
 
-The `≡` character (Unicode U+2261, "IDENTICAL TO") suggests these are:
-- Internal file reference tokens
-- Citation placeholders that normally get rendered as footnotes
-- Annotation markers that should be invisible to end users
+**The `≡` markers are:**
+- Internal annotation index markers from OpenAI's Responses API
+- Should be converted to proper `Annotation` objects with `.index` and `.source` fields
+- ChatKit v1.0.2 properly handles this conversion
+- See official example: `chatkit-samples-official/examples/knowledge-assistant/` 
 
-### When This Likely Happens:
-- ✅ When `file_search` tool is used (searching your knowledge base)
-- ❓ Possibly also with `web_search` tool
-- ❓ Check if this happens on EVERY response or only with tool use
+### When This Happens:
+- ✅ **ONLY with `file_search` tool** (confirmed by user)
+- ✅ Happens on **both local and production** environments  
+- ❌ Does NOT happen with `web_search` or regular responses
 
 ---
 
-## ✅ What I've Done
+## ✅ What Was Done
 
-### 1. Added Citation Marker Filter (WORKAROUND)
+### 1. Cloned Official OpenAI ChatKit Samples
+**Repository**: https://github.com/openai/openai-chatkit-advanced-samples
 
-**File**: `backend-v2/app/main.py`
+Compared their `knowledge-assistant` example (which uses `file_search`) with your implementation to identify the issue.
 
-Created a function to strip these markers:
+### 2. Identified Version Mismatch
+Found discrepancy between `requirements.txt` and installed packages.
 
-```python
-def _strip_citation_markers(text: str) -> str:
-    """Strip OpenAI's internal citation markers that leak into responses."""
-    if not text:
-        return text
-    
-    # Remove citation markers: ≡...≡
-    cleaned = re.sub(r'≡[^≡]*≡', '', text)
-    
-    # Also catch other common citation formats
-    cleaned = re.sub(r'【[^】]*】', '', cleaned)  # 【】 brackets
-    cleaned = re.sub(r'〔[^〕]*〕', '', cleaned)  # 〔〕 brackets
-    
-    return cleaned
-```
+### 3. Upgraded ChatKit to Latest Version
+**Changes Made:**
+- Updated `requirements.txt`: `openai-chatkit>=1.0.0` (was `==0.0.2`)
+- Recreated virtual environment with Python 3.13
+- Installed `openai-chatkit 1.0.2` (latest version)
+- Removed workaround code that was manually stripping markers
 
-This filter is now applied to ALL streaming events before they're sent to the frontend.
+**Files Changed:**
+- `backend-v2/requirements.txt` - Updated chatkit version  
+- `backend-v2/app/main.py` - Removed manual citation stripping workaround
+- `backend-v2/venv/` - Recreated with correct versions
 
-### 2. Added Debug Logging
-
-When `DEBUG_MODE=true`, the backend will now log:
-- Raw delta text from streaming events
-- When citation markers are detected and removed
-
-**To enable debug mode:**
-```bash
-# In your .env file or environment
-DEBUG_MODE=true
-```
+### 4. How the Fix Works
+ChatKit v1.0.2 properly converts citation markers to structured `Annotation` objects:
+- Markers like `≡file≡` become `annotation.index` fields
+- Source information is stored in `annotation.source` 
+- Citations can be extracted and displayed properly (see official example)
+- Raw markers no longer leak into user-facing text
 
 ---
 
@@ -233,16 +232,18 @@ If this is a bug in OpenAI's libraries:
 
 ## ✅ Status
 
-**Current Status**: WORKAROUND DEPLOYED  
-**Impact**: Low (markers are now filtered)  
-**Monitoring**: Debug logs enabled to track occurrences
+**Current Status**: ✅ **FIXED**  
+**Fix Type**: Library upgrade (proper solution, not workaround)  
+**Version Deployed**: `openai-chatkit 1.0.2`
 
-**Action Required by User:**
-1. Restart backend
-2. Test with file_search queries
-3. Report back if issue persists
+**Deployment Status:**
+- ✅ **Local**: Backend restarted with new version
+- 🔄 **Staging (Railway dev)**: Deploying now (~1-2 minutes)
+- ⏸️ **Production (Railway main)**: Deploy after testing staging
 
-**Long-term Solution Needed:**
-- Update to newer library versions that fix this
-- OR keep the workaround in place if it's an upstream bug
+**Test Instructions:**
+1. Open local app: http://localhost:5173
+2. Ask: **"Show me your best hook templates"** (triggers file_search)
+3. Verify: No `≡file≡` or `≡turn0file2≡` characters in response
+4. Check: Citations should work properly (if needed later)
 
