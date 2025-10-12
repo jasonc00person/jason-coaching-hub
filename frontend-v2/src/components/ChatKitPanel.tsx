@@ -61,12 +61,12 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
       colorScheme: theme,
       color: {
         grayscale: {
-          hue: 0,
-          tint: 0,
-          shade: -4,
+          hue: 220,
+          tint: 6,
+          shade: theme === "dark" ? -1 : -4,
         },
         accent: {
-          primary: "#ffffff",
+          primary: theme === "dark" ? "#f1f5f9" : "#0f172a",
           level: 1,
         },
       },
