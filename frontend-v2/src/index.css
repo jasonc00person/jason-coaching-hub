@@ -101,3 +101,243 @@ button[aria-label*="history"],
 button[aria-label*="History"] {
   display: none !important;
 }
+
+/* ============================================
+   🎨 CHATGPT-STYLE THEME
+   ============================================ */
+
+/* Main background - ChatGPT dark mode */
+[data-chatkit-root] {
+  background-color: #212121 !important;
+}
+
+/* Message viewport/container */
+[data-chatkit-viewport],
+[data-chatkit-messages] {
+  background-color: #212121 !important;
+  padding: 2rem 1rem !important;
+}
+
+/* Center all message bubbles */
+[data-chatkit-message] {
+  max-width: 48rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 0.75rem 0 !important;
+}
+
+/* User messages - right-aligned bubble */
+[data-chatkit-message][data-role="user"] {
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+
+[data-chatkit-message][data-role="user"] [data-chatkit-message-content] {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #eeeeee !important;
+  border-radius: 1.5rem !important;
+  padding: 0.75rem 1.25rem !important;
+  max-width: 70% !important;
+  word-wrap: break-word !important;
+}
+
+/* Assistant messages - left-aligned with avatar */
+[data-chatkit-message][data-role="assistant"] {
+  display: flex !important;
+  gap: 0.75rem !important;
+  align-items: flex-start !important;
+}
+
+[data-chatkit-message][data-role="assistant"] [data-chatkit-message-content] {
+  background-color: transparent !important;
+  color: #eeeeee !important;
+  padding: 0.5rem 0 !important;
+  flex: 1 !important;
+}
+
+/* Avatar styling - ChatGPT style */
+[data-chatkit-avatar] {
+  width: 2rem !important;
+  height: 2rem !important;
+  border-radius: 1.5rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  color: white !important;
+  flex-shrink: 0 !important;
+}
+
+/* Composer (input area) - ChatGPT style */
+[data-chatkit-composer] {
+  max-width: 48rem !important;
+  margin: 0 auto 1rem !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 1.5rem !important;
+  border: none !important;
+  padding: 0.5rem !important;
+}
+
+[data-chatkit-composer-input] {
+  background: transparent !important;
+  color: white !important;
+  border: none !important;
+  font-size: 0.875rem !important;
+  padding: 0.5rem 0.875rem !important;
+}
+
+[data-chatkit-composer-input]::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Send button - ChatGPT circular style */
+[data-chatkit-send-button] {
+  background-color: white !important;
+  color: black !important;
+  border-radius: 50% !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0.25rem !important;
+  transition: opacity 0.2s !important;
+}
+
+[data-chatkit-send-button]:disabled {
+  opacity: 0.3 !important;
+}
+
+[data-chatkit-send-button]:not(:disabled):hover {
+  opacity: 0.9 !important;
+}
+
+/* Action buttons (copy, regenerate, etc.) */
+[data-chatkit-action-bar] {
+  margin-top: 0.5rem !important;
+  gap: 0.25rem !important;
+}
+
+[data-chatkit-action-button] {
+  background: transparent !important;
+  color: #b4b4b4 !important;
+  border: none !important;
+  padding: 0.25rem !important;
+  border-radius: 0.375rem !important;
+  transition: background-color 0.2s !important;
+}
+
+[data-chatkit-action-button]:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #eeeeee !important;
+}
+
+/* Code blocks - ChatGPT style */
+pre {
+  background-color: #2d2d2d !important;
+  border-radius: 0.5rem !important;
+  padding: 1rem !important;
+  overflow-x: auto !important;
+  margin: 0.75rem 0 !important;
+}
+
+code {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace !important;
+  font-size: 0.875rem !important;
+}
+
+/* Inline code */
+p code, li code {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e4e4e7 !important;
+  padding: 0.125rem 0.375rem !important;
+  border-radius: 0.25rem !important;
+}
+
+/* Loading indicator */
+[data-chatkit-loading] {
+  color: #b4b4b4 !important;
+}
+
+/* Greeting/start screen */
+[data-chatkit-start-screen] {
+  background-color: #212121 !important;
+  color: white !important;
+}
+
+[data-chatkit-greeting] {
+  color: white !important;
+  font-size: 1.25rem !important;
+  font-weight: 400 !important;
+}
+
+/* Starter prompts */
+[data-chatkit-prompt-button] {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #eeeeee !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0.75rem !important;
+  padding: 0.75rem 1rem !important;
+  transition: all 0.2s !important;
+}
+
+[data-chatkit-prompt-button]:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Footer text */
+[data-chatkit-footer] {
+  text-align: center !important;
+  font-size: 0.75rem !important;
+  color: #cdcdcd !important;
+  padding: 0.5rem !important;
+}
+
+/* Scrollbar - ChatGPT style */
+[data-chatkit-viewport]::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+[data-chatkit-viewport]::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+[data-chatkit-viewport]::-webkit-scrollbar-thumb {
+  background: #4b5563 !important;
+  border-radius: 4px !important;
+}
+
+[data-chatkit-viewport]::-webkit-scrollbar-thumb:hover {
+  background: #6b7280 !important;
+}
+
+/* Annotations/Citations - ensure they render properly */
+[data-chatkit-annotation] {
+  color: #60a5fa !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  font-size: 0.75rem !important;
+  vertical-align: super !important;
+  padding: 0 0.125rem !important;
+}
+
+[data-chatkit-annotation]:hover {
+  text-decoration: underline !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  [data-chatkit-viewport],
+  [data-chatkit-messages] {
+    padding: 1rem 0.5rem !important;
+  }
+  
+  [data-chatkit-message][data-role="user"] [data-chatkit-message-content] {
+    max-width: 85% !important;
+  }
+}
