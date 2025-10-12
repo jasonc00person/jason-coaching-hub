@@ -15,7 +15,7 @@ function App() {
   }, []);
 
   return (
-    <div className="h-screen w-full bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 flex flex-col">
+    <div className="h-screen w-full flex flex-col" style={{ backgroundColor: '#0F0F0F' }}>
       <ChatKitPanel theme={theme} />
     </div>
   );
