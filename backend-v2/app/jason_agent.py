@@ -4,8 +4,8 @@ import os
 import requests
 from typing import Any
 
-from agents import Agent
-from agents.models.openai_responses import FileSearchTool, WebSearchTool, FunctionTool
+from agents import Agent, function_tool, RunContextWrapper
+from agents.models.openai_responses import FileSearchTool, WebSearchTool
 from chatkit.agents import AgentContext
 
 JASON_VECTOR_STORE_ID = os.getenv("JASON_VECTOR_STORE_ID", "vs_68e6b33ec38481919601875ea1e2287c")
@@ -179,7 +179,18 @@ Keep it real, keep it actionable, keep them inspired. That's the whole vibe.
 # CUSTOM TOOL: INSTAGRAM REEL TRANSCRIBER
 # ============================================================================
 
-def transcribe_instagram_reel(reel_url: str) -> str:
+@function_tool(
+    description_override=(
+        "Transcribe and analyze an Instagram reel to create a detailed Audio/Visual (A/V) script. "
+        "Use this when a user shares an Instagram reel URL and wants to understand the content structure, "
+        "see what's being said, or analyze the video's script breakdown. "
+        "Returns a detailed scene-by-scene breakdown with visual descriptions and audio/dialogue."
+    )
+)
+async def transcribe_instagram_reel(
+    ctx: RunContextWrapper[AgentContext],
+    reel_url: str
+) -> dict[str, str]:
     """
     Transcribe an Instagram reel into an A/V script format.
     
@@ -188,13 +199,16 @@ def transcribe_instagram_reel(reel_url: str) -> str:
     what's happening visually and what's being said.
     
     Args:
+        ctx: The agent context
         reel_url: The Instagram reel URL (e.g., https://www.instagram.com/p/ABC123/)
     
     Returns:
-        A detailed A/V script breakdown of the reel content
+        A dictionary with the transcription result or error message.
     """
     if not N8N_REEL_TRANSCRIBER_WEBHOOK:
-        return "Error: Instagram reel transcriber is not configured. Please set the N8N_REEL_TRANSCRIBER_WEBHOOK environment variable."
+        return {
+            "error": "Instagram reel transcriber is not configured. Please set the N8N_REEL_TRANSCRIBER_WEBHOOK environment variable."
+        }
     
     try:
         # Build headers with API key for authentication
@@ -221,26 +235,19 @@ def transcribe_instagram_reel(reel_url: str) -> str:
             parts = content.get("parts", [])
             if parts and len(parts) > 0:
                 transcription = parts[0].get("text", "")
-                return transcription
+                return {"result": transcription}
         
         # Fallback if structure is different
-        return f"Successfully processed reel, but unexpected response format: {str(result)[:500]}"
+        return {"result": f"Successfully processed reel, but unexpected response format: {str(result)[:500]}"}
     
     except requests.Timeout:
-        return "Error: The reel transcription is taking longer than expected. This usually happens with very long videos or network issues. Please try again."
+        return {"error": "The reel transcription is taking longer than expected. This usually happens with very long videos or network issues. Please try again."}
     
     except requests.RequestException as e:
-        return f"Error transcribing reel: {str(e)}"
+        return {"error": f"Error transcribing reel: {str(e)}"}
     
     except Exception as e:
-        return f"Unexpected error: {str(e)}"
-
-
-def build_reel_transcriber_tool() -> FunctionTool:
-    """
-    Build the Instagram reel transcriber tool.
-    """
-    return FunctionTool(transcribe_instagram_reel)
+        return {"error": f"Unexpected error: {str(e)}"}
 
 
 def build_file_search_tool() -> FileSearchTool:
@@ -290,7 +297,7 @@ jason_agent = Agent[AgentContext](
     tools=[
         build_file_search_tool(),
         build_web_search_tool(),
-        build_reel_transcriber_tool(),
+        transcribe_instagram_reel,  # type: ignore[arg-type]
     ],
 )
 
