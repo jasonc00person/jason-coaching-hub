@@ -43,6 +43,30 @@ import mimetypes
 
 from .jason_agent import jason_agent, JASON_VECTOR_STORE_ID
 from .memory_store import MemoryStore
+import re
+
+
+def _strip_annotation_markers(text: str) -> str:
+    """
+    Strip annotation index markers from response text.
+    
+    These markers (≡file≡, ≡turn0file2≡, etc.) are internal OpenAI citation indices
+    that should be converted to Annotation objects by ChatKit, but still appear in text.
+    
+    Based on official OpenAI chatkit-samples knowledge-assistant example,
+    these need to be manually stripped from display text even in latest versions.
+    """
+    if not text:
+        return text
+    
+    # Remove citation markers: ≡...≡ pattern
+    # Matches: ≡file≡, ≡turn0file2≡, ≡turn0file3≡, etc.
+    cleaned = re.sub(r'≡[^≡]*≡', '', text)
+    
+    # Also catch other citation bracket formats that might appear
+    cleaned = re.sub(r'【[^】]*】', '', cleaned)
+    
+    return cleaned
 
 
 def _user_message_text(item: UserMessageItem) -> str:
@@ -296,6 +320,12 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 )
                 # 🔧 Stream events with ChatKit conversion
                 async for chatkit_event in stream_agent_response(agent_context, result):
+                    # Strip annotation markers from text deltas
+                    # Even with chatkit 1.0.2, these markers still appear in text
+                    # and need manual stripping (confirmed via official samples)
+                    if hasattr(chatkit_event, 'delta') and isinstance(chatkit_event.delta, str):
+                        chatkit_event.delta = _strip_annotation_markers(chatkit_event.delta)
+                    
                     yield chatkit_event
         else:
             # Production mode: no tracing overhead
@@ -315,6 +345,12 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             )
             # 🔧 Stream events with ChatKit conversion
             async for chatkit_event in stream_agent_response(agent_context, result):
+                # Strip annotation markers from text deltas
+                # Even with chatkit 1.0.2, these markers still appear in text
+                # and need manual stripping (confirmed via official samples)
+                if hasattr(chatkit_event, 'delta') and isinstance(chatkit_event.delta, str):
+                    chatkit_event.delta = _strip_annotation_markers(chatkit_event.delta)
+                
                 yield chatkit_event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
