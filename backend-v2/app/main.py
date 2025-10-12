@@ -43,6 +43,34 @@ import mimetypes
 
 from .jason_agent import jason_agent, JASON_VECTOR_STORE_ID
 from .memory_store import MemoryStore
+import re
+
+
+def _strip_citation_markers(text: str) -> str:
+    """
+    Strip OpenAI's internal citation markers that sometimes leak into responses.
+    
+    These markers appear as:
+    - ≡file≡
+    - ≡turn0file2≡
+    - ≡turnNfileM≡ (where N and M are numbers)
+    
+    This is likely a bug in OpenAI's Responses API or ChatKit library where
+    file_search citations aren't being properly filtered.
+    """
+    if not text:
+        return text
+    
+    # Remove citation markers with the pattern: ≡...≡
+    # Matches: ≡file≡, ≡turn0file2≡, etc.
+    cleaned = re.sub(r'≡[^≡]*≡', '', text)
+    
+    # Also try to catch other common citation formats
+    # OpenAI sometimes uses 【】 or other brackets
+    cleaned = re.sub(r'【[^】]*】', '', cleaned)
+    cleaned = re.sub(r'〔[^〕]*〕', '', cleaned)
+    
+    return cleaned
 
 
 def _user_message_text(item: UserMessageItem) -> str:
@@ -296,6 +324,21 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 )
                 # 🔧 Stream events with ChatKit conversion
                 async for chatkit_event in stream_agent_response(agent_context, result):
+                    # Debug: Log events to catch weird characters
+                    if DEBUG_MODE and hasattr(chatkit_event, 'delta'):
+                        print(f"[STREAM DEBUG] Delta text: {repr(chatkit_event.delta)}")
+                    
+                    # 🧹 WORKAROUND: Strip citation markers that leak from OpenAI's API
+                    # These appear as ≡file≡, ≡turn0file2≡, etc.
+                    if hasattr(chatkit_event, 'delta') and isinstance(chatkit_event.delta, str):
+                        original_delta = chatkit_event.delta
+                        cleaned_delta = _strip_citation_markers(original_delta)
+                        if cleaned_delta != original_delta:
+                            if DEBUG_MODE:
+                                print(f"[CITATION FILTER] Removed markers: {repr(original_delta)} -> {repr(cleaned_delta)}")
+                            # Modify the event's delta
+                            chatkit_event.delta = cleaned_delta
+                    
                     yield chatkit_event
         else:
             # Production mode: no tracing overhead
@@ -315,6 +358,21 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
             )
             # 🔧 Stream events with ChatKit conversion
             async for chatkit_event in stream_agent_response(agent_context, result):
+                # Debug: Log events to catch weird characters
+                if DEBUG_MODE and hasattr(chatkit_event, 'delta'):
+                    print(f"[STREAM DEBUG] Delta text: {repr(chatkit_event.delta)}")
+                
+                # 🧹 WORKAROUND: Strip citation markers that leak from OpenAI's API
+                # These appear as ≡file≡, ≡turn0file2≡, etc.
+                if hasattr(chatkit_event, 'delta') and isinstance(chatkit_event.delta, str):
+                    original_delta = chatkit_event.delta
+                    cleaned_delta = _strip_citation_markers(original_delta)
+                    if cleaned_delta != original_delta:
+                        if DEBUG_MODE:
+                            print(f"[CITATION FILTER] Removed markers: {repr(original_delta)} -> {repr(cleaned_delta)}")
+                        # Modify the event's delta
+                        chatkit_event.delta = cleaned_delta
+                
                 yield chatkit_event
 
     async def to_message_content(self, input: Attachment) -> ResponseInputContentParam:
