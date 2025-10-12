@@ -3,8 +3,8 @@ import { Streamdown } from "streamdown";
 
 import { cn } from "@/lib/utils";
 
-interface ResponseProps extends React.ComponentProps<typeof Streamdown> {
-  children?: React.ReactNode;
+interface ResponseProps {
+  children?: string;
   className?: string;
 }
 

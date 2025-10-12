@@ -2,7 +2,7 @@ import { makeAssistantToolUI } from "@assistant-ui/react";
 
 export const ToolFallback = makeAssistantToolUI({
   toolName: "*",
-  render: function ToolFallback({ part }) {
+  render: function ToolFallback({ part }: any) {
     return (
       <p className="mb-4 mt-2 text-sm">
         Tool execution:{" "}

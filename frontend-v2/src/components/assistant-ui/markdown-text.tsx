@@ -4,8 +4,13 @@ import remarkGfm from "remark-gfm";
 
 export const MarkdownText = makeAssistantToolUI({
   toolName: "*",
-  render: ({ part }) => (
-    <MarkdownTextPrimitive text={part.text} remarkPlugins={[remarkGfm]} />
-  ),
+  render: ({ part }: any) => {
+    const MarkdownComponent = MarkdownTextPrimitive as any;
+    return (
+      <MarkdownComponent remarkPlugins={[remarkGfm]}>
+        {part.text}
+      </MarkdownComponent>
+    );
+  },
 });
 

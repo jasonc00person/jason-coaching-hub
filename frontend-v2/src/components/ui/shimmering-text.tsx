@@ -37,7 +37,7 @@ export const ShimmeringText = ({
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, {
     once,
-    margin: inViewMargin,
+    margin: inViewMargin as any,
   });
 
   const [key, setKey] = useState(0);
