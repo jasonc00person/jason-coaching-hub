@@ -40,9 +40,11 @@ import secrets
 import tempfile
 import base64
 import mimetypes
+import json
 
 from .jason_agent import jason_agent, JASON_VECTOR_STORE_ID
 from .memory_store import MemoryStore
+from .ai_sdk_endpoint import AISDKChatHandler
 import re
 
 
@@ -275,8 +277,9 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         # Get SQLiteSession for this thread (for agent memory)
         session = self._get_session(thread.id)
         
-        # 🎯 Using unified GPT-5 agent with intelligent internal routing
-        # GPT-5 automatically switches between fast and thinking modes based on query complexity
+        # 🎯 Using single GPT-5 agent (simple and fast)
+        # GPT-5 handles all queries with adaptive response depth
+        # reasoning_effort="medium" enables thinking mode for complex queries
         if DEBUG_MODE:
             print(f"[GPT-5 Agent] Processing query: '{message_text[:50] if message_text else 'image/file'}...'")
 
@@ -305,15 +308,17 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         if DEBUG_MODE:
             with trace(f"Jason coaching - {thread.id[:8]}"):
                 result = Runner.run_streamed(
-                    self.assistant,  # 🎯 Unified GPT-5 agent with intelligent routing
+                    self.assistant,  # 🎯 Single GPT-5 agent (fast and effective)
                     agent_input,  # 🖼️ Now includes attachments!
                     context=agent_context,
                     session=use_session,  # ✨ Disable session for image messages (Agent SDK limitation)
                     run_config=RunConfig(
                         model_settings=ModelSettings(
                             parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
-                            # reasoning_effort NOT SET - allows GPT-5's internal router to decide
-                            # GPT-5 will automatically switch between fast and thinking modes
+                            reasoning_effort="low",  # ✨ CRITICAL: Enables GPT-5's thinking mode
+                            # "low" = fast (2-3s thinking, good for chatbot)
+                            # "medium" = balanced (5-10s thinking)
+                            # "high" = deep (15-30s thinking, for complex analysis)
                             verbosity="low",  # 💬 Concise responses (matches voice guidelines)
                         )
                     ),
@@ -348,15 +353,17 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         else:
             # Production mode: no tracing overhead
             result = Runner.run_streamed(
-                self.assistant,  # 🎯 Unified GPT-5 agent with intelligent routing
+                self.assistant,  # 🎯 Single GPT-5 agent (fast and effective)
                 agent_input,  # 🖼️ Now includes attachments!
                 context=agent_context,
                 session=use_session,  # ✨ Disable session for image messages (Agent SDK limitation)
                 run_config=RunConfig(
                     model_settings=ModelSettings(
                         parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
-                        # reasoning_effort NOT SET - allows GPT-5's internal router to decide
-                        # GPT-5 will automatically switch between fast and thinking modes
+                        reasoning_effort="low",  # ✨ CRITICAL: Enables GPT-5's thinking mode
+                        # "low" = fast (2-3s thinking, good for chatbot)
+                        # "medium" = balanced (5-10s thinking)
+                        # "high" = deep (15-30s thinking, for complex analysis)
                         verbosity="low",  # 💬 Concise responses (matches voice guidelines)
                     )
                 ),
@@ -590,6 +597,32 @@ async def chatkit_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/chat")
+async def ai_sdk_chat_endpoint(request: Request) -> StreamingResponse:
+    """
+    AI SDK v5 compatible chat endpoint for assistant-ui.
+    Uses the FULL Jason Agent with tools, vector store, and memory.
+    """
+    try:
+        # Parse request body
+        body = await request.json()
+        
+        print(f"[AI SDK] Received chat request with {len(body.get('messages', []))} messages")
+        
+        # Initialize AI SDK handler with full Jason Agent
+        ai_handler = AISDKChatHandler()
+        
+        # Handle the chat request with the real agent
+        return await ai_handler.handle_chat(body)
+        
+    except Exception as e:
+        print(f"[AI SDK] Error processing chat request: {e}")
+        if DEBUG_MODE:
+            import traceback
+            traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "healthy", "agent": "Jason Cooperson Coaching Agent"}
@@ -600,9 +633,16 @@ async def root() -> dict[str, Any]:
     return {
         "message": "Jason's Coaching ChatKit API",
         "status": "running",
-        "model": "GPT-5 with intelligent internal routing (automatically switches between fast and thinking modes)",
+        "model": "GPT-5 with reasoning_effort=low (adaptive thinking)",
+        "architecture": {
+            "type": "Single agent (simple and fast)",
+            "model": "GPT-5",
+            "reasoning": "reasoning_effort=low (2-3s thinking when needed)",
+            "tools": "File search, web search, Instagram transcriber",
+            "benefits": "Faster than multi-agent routing, still intelligent"
+        },
         "features": [
-            "GPT-5 intelligent routing (auto fast/thinking mode selection)",
+            "GPT-5 with thinking mode enabled (reasoning_effort=low)",
             "Image analysis (vision)",
             "Document processing (PDF, DOCX, XLSX, PPTX)",
             "File attachments (images, text, code files)",

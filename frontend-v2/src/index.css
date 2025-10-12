@@ -2,22 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color-scheme: dark;
-  color: #ffffff;
-  background-color: #0f0f0f;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-tap-highlight-color: transparent;
+@layer base {
+  :root {
+    --background: 0 0% 6%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 6%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 100%;
+    --radius: 0.5rem;
+  }
 }
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html {
@@ -31,13 +44,14 @@ body {
   padding: 0;
   min-width: 320px;
   height: 100vh;
-  height: 100dvh; /* Dynamic viewport height for mobile */
-  background-color: #0f0f0f;
+  height: 100dvh;
+  background-color: #0F0F0F;
   overflow: hidden;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   width: 100%;
   touch-action: manipulation;
-  /* Safe area insets for mobile notches and toolbars */
+  color: white;
+  /* Safe area insets for mobile */
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -47,10 +61,6 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
 /* Custom scrollbar */
@@ -71,202 +81,15 @@ code {
   background: #4b5563;
 }
 
-/* Shadow utility for card */
-.shadow-card {
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-}
-
-/* Enhanced glassmorphism utilities */
-.backdrop-blur-2xl {
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-}
-
-.backdrop-blur-xl {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-/* Safe area utilities for mobile */
-.safe-top {
-  top: max(1rem, env(safe-area-inset-top));
-}
-
-.safe-bottom {
-  bottom: max(1rem, env(safe-area-inset-bottom));
-}
-
 /* Prevent overscroll bounce on mobile */
 html, body {
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Hide ChatKit thread history/switcher UI for session-based chat */
-[data-chatkit-threads],
-[data-chatkit-thread-switcher],
-[data-chatkit-sidebar],
-button[aria-label*="thread"],
-button[aria-label*="Thread"],
-button[aria-label*="history"],
-button[aria-label*="History"] {
-  display: none !important;
-}
-
-/* ============================================
-   🎨 CHATGPT-STYLE THEME
-   ============================================ */
-
-/* Main background - Modern glassmorphism */
-[data-chatkit-root] {
-  background-color: transparent !important;
-}
-
-/* Message viewport/container - Glassmorphism effect */
-[data-chatkit-viewport],
-[data-chatkit-messages] {
-  background-color: rgba(255, 255, 255, 0.03) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  padding: 2rem 1rem !important;
-  box-shadow: 
-    0 45px 90px -45px rgba(15, 23, 42, 0.8),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
-  border-radius: 24px !important;
-  margin: 1rem !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
-}
-
-/* Center all message bubbles */
-[data-chatkit-message] {
-  max-width: 48rem !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  padding: 0.75rem 0 !important;
-}
-
-/* User messages - right-aligned bubble with glassmorphism */
-[data-chatkit-message][data-role="user"] {
-  display: flex !important;
-  justify-content: flex-end !important;
-}
-
-[data-chatkit-message][data-role="user"] [data-chatkit-message-content] {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  color: #eeeeee !important;
-  border-radius: 1.5rem !important;
-  padding: 0.75rem 1.25rem !important;
-  max-width: 70% !important;
-  word-wrap: break-word !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 8px 32px -8px rgba(15, 23, 42, 0.5) !important;
-}
-
-/* Assistant messages - left-aligned with avatar */
-[data-chatkit-message][data-role="assistant"] {
-  display: flex !important;
-  gap: 0.75rem !important;
-  align-items: flex-start !important;
-}
-
-[data-chatkit-message][data-role="assistant"] [data-chatkit-message-content] {
-  background-color: transparent !important;
-  color: #eeeeee !important;
-  padding: 0.5rem 0 !important;
-  flex: 1 !important;
-}
-
-/* Avatar styling - ChatGPT style */
-[data-chatkit-avatar] {
-  width: 2rem !important;
-  height: 2rem !important;
-  border-radius: 1.5rem !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-weight: 600 !important;
-  font-size: 0.75rem !important;
-  color: white !important;
-  flex-shrink: 0 !important;
-}
-
-/* Composer (input area) - Glassmorphism style */
-[data-chatkit-composer] {
-  max-width: 48rem !important;
-  margin: 0 auto 1rem !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border-radius: 1.5rem !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  padding: 0.5rem !important;
-  box-shadow: 
-    0 20px 50px -20px rgba(15, 23, 42, 0.6),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
-}
-
-[data-chatkit-composer-input] {
-  background: transparent !important;
-  color: white !important;
-  border: none !important;
-  font-size: 0.875rem !important;
-  padding: 0.5rem 0.875rem !important;
-}
-
-[data-chatkit-composer-input]::placeholder {
-  color: rgba(255, 255, 255, 0.5) !important;
-}
-
-/* Send button - ChatGPT circular style */
-[data-chatkit-send-button] {
-  background-color: white !important;
-  color: black !important;
-  border-radius: 50% !important;
-  width: 2rem !important;
-  height: 2rem !important;
-  padding: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin: 0.25rem !important;
-  transition: opacity 0.2s !important;
-}
-
-[data-chatkit-send-button]:disabled {
-  opacity: 0.3 !important;
-}
-
-[data-chatkit-send-button]:not(:disabled):hover {
-  opacity: 0.9 !important;
-}
-
-/* Action buttons (copy, regenerate, etc.) */
-[data-chatkit-action-bar] {
-  margin-top: 0.5rem !important;
-  gap: 0.25rem !important;
-}
-
-[data-chatkit-action-button] {
-  background: transparent !important;
-  color: #b4b4b4 !important;
-  border: none !important;
-  padding: 0.25rem !important;
-  border-radius: 0.375rem !important;
-  transition: background-color 0.2s !important;
-}
-
-[data-chatkit-action-button]:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  color: #eeeeee !important;
-}
-
-/* Code blocks - ChatGPT style */
+/* Markdown code blocks */
 pre {
-  background-color: #2d2d2d !important;
+  background-color: #1a1a1a !important;
   border-radius: 0.5rem !important;
   padding: 1rem !important;
   overflow-x: auto !important;
@@ -279,106 +102,34 @@ code {
 }
 
 /* Inline code */
-p code, li code {
+p code,
+li code {
   background-color: rgba(255, 255, 255, 0.1) !important;
   color: #e4e4e7 !important;
   padding: 0.125rem 0.375rem !important;
   border-radius: 0.25rem !important;
 }
 
-/* Loading indicator */
-[data-chatkit-loading] {
-  color: #b4b4b4 !important;
-}
-
-/* Greeting/start screen - Glassmorphism */
-[data-chatkit-start-screen] {
-  background: rgba(255, 255, 255, 0.02) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border-radius: 24px !important;
-  margin: 1rem !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
-  box-shadow: 
-    0 45px 90px -45px rgba(15, 23, 42, 0.8),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
-  color: white !important;
-}
-
-[data-chatkit-greeting] {
-  color: white !important;
-  font-size: 1.25rem !important;
-  font-weight: 400 !important;
-}
-
-/* Starter prompts - Glassmorphism cards */
-[data-chatkit-prompt-button] {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  color: #eeeeee !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 1rem !important;
-  padding: 0.75rem 1rem !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 8px 32px -12px rgba(15, 23, 42, 0.4) !important;
-}
-
-[data-chatkit-prompt-button]:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06)) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 12px 48px -16px rgba(15, 23, 42, 0.6) !important;
-}
-
-/* Footer text */
-[data-chatkit-footer] {
-  text-align: center !important;
-  font-size: 0.75rem !important;
-  color: #cdcdcd !important;
-  padding: 0.5rem !important;
-}
-
-/* Scrollbar - ChatGPT style */
-[data-chatkit-viewport]::-webkit-scrollbar {
-  width: 8px !important;
-}
-
-[data-chatkit-viewport]::-webkit-scrollbar-track {
-  background: transparent !important;
-}
-
-[data-chatkit-viewport]::-webkit-scrollbar-thumb {
-  background: #4b5563 !important;
-  border-radius: 4px !important;
-}
-
-[data-chatkit-viewport]::-webkit-scrollbar-thumb:hover {
-  background: #6b7280 !important;
-}
-
-/* Annotations/Citations - ensure they render properly */
-[data-chatkit-annotation] {
-  color: #60a5fa !important;
-  text-decoration: none !important;
-  cursor: pointer !important;
-  font-size: 0.75rem !important;
-  vertical-align: super !important;
-  padding: 0 0.125rem !important;
-}
-
-[data-chatkit-annotation]:hover {
-  text-decoration: underline !important;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  [data-chatkit-viewport],
-  [data-chatkit-messages] {
-    padding: 1rem 0.5rem !important;
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-  
-  [data-chatkit-message][data-role="user"] [data-chatkit-message-content] {
-    max-width: 85% !important;
+  to {
+    opacity: 1;
   }
+}
+
+.animate-fade-in {
+  animation: fadeIn 200ms ease-in;
+}
+
+.animate-in {
+  animation: fadeIn 200ms ease-in;
+}
+
+/* Focus visible */
+*:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
 }

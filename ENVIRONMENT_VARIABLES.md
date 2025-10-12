@@ -12,6 +12,8 @@ Set these in your Railway project dashboard → Variables tab
 OPENAI_API_KEY=sk-proj-YOUR_KEY_HERE
 JASON_VECTOR_STORE_ID=vs_YOUR_VECTOR_STORE_ID_HERE
 DEBUG_MODE=false
+N8N_REEL_TRANSCRIBER_WEBHOOK=https://content-os.app.n8n.cloud/webhook/YOUR_WEBHOOK_ID
+N8N_REEL_TRANSCRIBER_API_KEY=your_n8n_api_key_here
 ```
 
 ### Staging Railway Project
@@ -20,6 +22,8 @@ DEBUG_MODE=false
 OPENAI_API_KEY=sk-proj-YOUR_KEY_HERE              # Same as production
 JASON_VECTOR_STORE_ID=vs_YOUR_VECTOR_STORE_ID_HERE   # Same as production
 DEBUG_MODE=true                                    # Enable debug logs
+N8N_REEL_TRANSCRIBER_WEBHOOK=https://content-os.app.n8n.cloud/webhook/YOUR_WEBHOOK_ID
+N8N_REEL_TRANSCRIBER_API_KEY=your_n8n_api_key_here
 ```
 
 ## Frontend (Vercel)
@@ -55,12 +59,16 @@ VITE_COMPOSER_PLACEHOLDER="What do you want to know?"
 - [ ] OPENAI_API_KEY
 - [ ] JASON_VECTOR_STORE_ID
 - [ ] DEBUG_MODE=false
+- [ ] N8N_REEL_TRANSCRIBER_WEBHOOK
+- [ ] N8N_REEL_TRANSCRIBER_API_KEY
 - [ ] Connected to `main` branch
 
 ### ✅ Staging Railway:
 - [ ] OPENAI_API_KEY
 - [ ] JASON_VECTOR_STORE_ID
 - [ ] DEBUG_MODE=true
+- [ ] N8N_REEL_TRANSCRIBER_WEBHOOK
+- [ ] N8N_REEL_TRANSCRIBER_API_KEY
 - [ ] Connected to `dev` branch
 
 ### ✅ Vercel Production:
