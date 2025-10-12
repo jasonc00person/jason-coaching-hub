@@ -251,9 +251,10 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         # Get SQLiteSession for this thread (for agent memory)
         session = self._get_session(thread.id)
         
-        # 🎯 Using handoff-based routing: Triage agent automatically routes to Quick Response or Strategy
+        # 🎯 Using unified GPT-5 agent with intelligent internal routing
+        # GPT-5 automatically switches between fast and thinking modes based on query complexity
         if DEBUG_MODE:
-            print(f"[Handoff System] Processing query: '{message_text[:50] if message_text else 'image/file'}...'")
+            print(f"[GPT-5 Agent] Processing query: '{message_text[:50] if message_text else 'image/file'}...'")
 
         agent_context = AgentContext(
             thread=thread,
@@ -280,15 +281,16 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         if DEBUG_MODE:
             with trace(f"Jason coaching - {thread.id[:8]}"):
                 result = Runner.run_streamed(
-                    self.assistant,  # 🎯 Triage agent with automatic handoffs
+                    self.assistant,  # 🎯 Unified GPT-5 agent with intelligent routing
                     agent_input,  # 🖼️ Now includes attachments!
                     context=agent_context,
                     session=use_session,  # ✨ Disable session for image messages (Agent SDK limitation)
                     run_config=RunConfig(
                         model_settings=ModelSettings(
                             parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
-                            reasoning_effort="low",  # ⚡ Low reasoning for faster responses (30-40% speedup)
-                            verbosity="low",  # 💬 Short responses (matches voice guidelines)
+                            # reasoning_effort NOT SET - allows GPT-5's internal router to decide
+                            # GPT-5 will automatically switch between fast and thinking modes
+                            verbosity="low",  # 💬 Concise responses (matches voice guidelines)
                         )
                     ),
                 )
@@ -298,15 +300,16 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
         else:
             # Production mode: no tracing overhead
             result = Runner.run_streamed(
-                self.assistant,  # 🎯 Triage agent with automatic handoffs
+                self.assistant,  # 🎯 Unified GPT-5 agent with intelligent routing
                 agent_input,  # 🖼️ Now includes attachments!
                 context=agent_context,
                 session=use_session,  # ✨ Disable session for image messages (Agent SDK limitation)
                 run_config=RunConfig(
                     model_settings=ModelSettings(
                         parallel_tool_calls=True,  # 🔥 3-5x faster with parallel execution
-                        reasoning_effort="low",  # ⚡ Low reasoning for faster responses (30-40% speedup)
-                        verbosity="low",  # 💬 Short responses (matches voice guidelines)
+                        # reasoning_effort NOT SET - allows GPT-5's internal router to decide
+                        # GPT-5 will automatically switch between fast and thinking modes
+                        verbosity="low",  # 💬 Concise responses (matches voice guidelines)
                     )
                 ),
             )
@@ -539,17 +542,18 @@ async def root() -> dict[str, Any]:
     return {
         "message": "Jason's Coaching ChatKit API",
         "status": "running",
-        "model": "GPT-5 with agent handoffs (automatic routing between Quick Response and Strategy agents)",
+        "model": "GPT-5 with intelligent internal routing (automatically switches between fast and thinking modes)",
         "features": [
-            "Agent handoffs (automatic triage routing)",
+            "GPT-5 intelligent routing (auto fast/thinking mode selection)",
             "Image analysis (vision)",
             "Document processing (PDF, DOCX, XLSX, PPTX)",
             "File attachments (images, text, code files)",
             "Knowledge base (vector search)",
+            "Web search (real-time trends and data)",
             "Voice transcription (Whisper)",
             "Text-to-speech (TTS)",
             "Extended context (400k tokens)",
-            "Reasoning control",
+            "Adaptive reasoning depth",
             "Parallel tool calls",
             "Interactive widgets (cards, forms, lists)",
             "Entity tagging (@mentions)",
