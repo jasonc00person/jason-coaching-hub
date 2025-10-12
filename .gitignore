@@ -48,3 +48,16 @@ coverage/
 
 # Build outputs
 *.tsbuildinfo
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Backup files
+*_backup.py
+*.bak
+
+# Embedded repositories
+assistant-ui-repo/
+chatkit-samples-official/

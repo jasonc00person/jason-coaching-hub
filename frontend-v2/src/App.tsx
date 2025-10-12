@@ -17,8 +17,6 @@ import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { Response } from "@/components/ui/response";
 import { cn } from "@/lib/utils";
 
-type ActiveButton = "none" | "add" | "deepSearch" | "think";
-
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -33,14 +31,12 @@ function App() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [toolHistory, setToolHistory] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const requestStartTimeRef = useRef<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const [hasTyped, setHasTyped] = useState(false);
-  const [activeButton, setActiveButton] = useState<ActiveButton>("none");
   const [isMobile, setIsMobile] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -148,7 +144,6 @@ function App() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setHasTyped(false);
-    setActiveButton("none");
     setIsLoading(true);
 
     // Capture request start time
@@ -245,7 +240,6 @@ function App() {
             const toolData = JSON.parse(data);
             if (toolData.type === "tool_start") {
               setActiveTool(toolData.name);
-              setToolHistory((prev) => [...prev, toolData.name]);
             } else if (toolData.type === "tool_end") {
               setActiveTool(null);
             }
@@ -264,7 +258,6 @@ function App() {
     } finally {
       setIsLoading(false);
       setActiveTool(null);
-      setToolHistory([]);
       requestStartTimeRef.current = null;
     }
   };
@@ -358,12 +351,10 @@ function App() {
     }
   };
 
-  const toggleButton = (button: ActiveButton) => {
+  const toggleButton = () => {
     if (!isLoading) {
       // Save the current selection state before toggling
       saveSelectionState();
-
-      setActiveButton((prev) => (prev === button ? "none" : button));
 
       // Restore the selection state after toggling
       setTimeout(() => {
@@ -564,7 +555,7 @@ function App() {
               variant="ghost"
               size="icon"
               className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-white/10 p-0"
-              onClick={() => toggleButton("add")}
+              onClick={() => toggleButton()}
               disabled={isLoading}
               aria-label="Add"
             >
