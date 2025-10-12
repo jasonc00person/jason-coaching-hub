@@ -10,6 +10,7 @@ from chatkit.agents import AgentContext
 
 JASON_VECTOR_STORE_ID = os.getenv("JASON_VECTOR_STORE_ID", "vs_68e6b33ec38481919601875ea1e2287c")
 N8N_REEL_TRANSCRIBER_WEBHOOK = os.getenv("N8N_REEL_TRANSCRIBER_WEBHOOK", "")
+N8N_REEL_TRANSCRIBER_API_KEY = os.getenv("N8N_REEL_TRANSCRIBER_API_KEY", "")
 
 # ============================================================================
 # UNIFIED GPT-5 AGENT WITH INTELLIGENT ROUTING
@@ -196,10 +197,16 @@ def transcribe_instagram_reel(reel_url: str) -> str:
         return "Error: Instagram reel transcriber is not configured. Please set the N8N_REEL_TRANSCRIBER_WEBHOOK environment variable."
     
     try:
+        # Build headers with API key for authentication
+        headers = {"Content-Type": "application/json"}
+        if N8N_REEL_TRANSCRIBER_API_KEY:
+            headers["X-API-Key"] = N8N_REEL_TRANSCRIBER_API_KEY
+        
         # Call the n8n webhook
         response = requests.post(
             N8N_REEL_TRANSCRIBER_WEBHOOK,
             json={"Reel URL": reel_url},
+            headers=headers,
             timeout=120  # 2 minute timeout (scraping + AI analysis takes time)
         )
         response.raise_for_status()

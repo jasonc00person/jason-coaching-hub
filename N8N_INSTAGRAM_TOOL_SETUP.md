@@ -35,13 +35,28 @@ To get the full URL:
 3. Look for the **Production URL** or **Webhook URL**
 4. It should look like: `https://your-n8n-instance.app.n8n.cloud/webhook/c25fd24e-ffca-406b-9294-7fae758715f5`
 
-### 2. Set the Environment Variable
+### 2. Secure Your Webhook (IMPORTANT!)
+
+#### In n8n:
+
+1. In your webhook node, change **Authentication** from `None` to `Header Auth`
+2. Set:
+   - **Name**: `X-API-Key`
+   - **Value**: Generate a strong random key (e.g., `reel_transcriber_secret_2025_xyz123`)
+3. Save your workflow
+
+This prevents unauthorized access to your webhook.
+
+### 3. Set Environment Variables
+
+You need to set TWO environment variables:
 
 #### For Local Development:
 
 Add this to `backend-v2/.env`:
 ```bash
-N8N_REEL_TRANSCRIBER_WEBHOOK=https://your-n8n-instance.app.n8n.cloud/webhook/c25fd24e-ffca-406b-9294-7fae758715f5
+N8N_REEL_TRANSCRIBER_WEBHOOK=https://content-os.app.n8n.cloud/webhook/c25fd24e-ffca-406b-9294-7fae758715f5
+N8N_REEL_TRANSCRIBER_API_KEY=reel_transcriber_secret_2025_xyz123
 ```
 
 #### For Railway (Staging):
@@ -49,9 +64,11 @@ N8N_REEL_TRANSCRIBER_WEBHOOK=https://your-n8n-instance.app.n8n.cloud/webhook/c25
 1. Go to your Railway project: https://railway.app/project/YOUR_PROJECT_ID
 2. Select the `jason-coaching-backend-staging` service
 3. Go to **Variables** tab
-4. Add new variable:
+4. Add TWO variables:
    - **Key**: `N8N_REEL_TRANSCRIBER_WEBHOOK`
-   - **Value**: `https://your-n8n-instance.app.n8n.cloud/webhook/c25fd24e-ffca-406b-9294-7fae758715f5`
+     - **Value**: `https://content-os.app.n8n.cloud/webhook/c25fd24e-ffca-406b-9294-7fae758715f5`
+   - **Key**: `N8N_REEL_TRANSCRIBER_API_KEY`
+     - **Value**: `reel_transcriber_secret_2025_xyz123` (must match what you set in n8n)
 5. Click **Add** and the service will automatically redeploy
 
 #### For Railway (Production):
@@ -133,17 +150,36 @@ def transcribe_instagram_reel(reel_url: str) -> str
 You can test your n8n webhook directly:
 
 ```bash
-curl -X POST https://your-n8n-instance.app.n8n.cloud/webhook/c25fd24e-ffca-406b-9294-7fae758715f5 \
+curl -X POST https://content-os.app.n8n.cloud/webhook/c25fd24e-ffca-406b-9294-7fae758715f5 \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: reel_transcriber_secret_2025_xyz123" \
   -d '{"Reel URL": "https://www.instagram.com/p/DPCEQYdjbPz/"}'
 ```
 
-You should get back the A/V script in JSON format.
+You should get back the A/V script in JSON format. Without the correct `X-API-Key` header, you'll get a 403 Forbidden error.
+
+## Security Configuration
+
+### n8n Webhook Options Explained
+
+For your use case (server-to-server from Railway → n8n), here's what you need:
+
+| Option | Recommended | Why |
+|--------|-------------|-----|
+| **Header Auth** | ✅ YES | Prevents unauthorized access. Simple and secure. |
+| **CORS** | ❌ NO | Only needed for browser requests. Your backend is server-side. |
+| **IP Whitelist** | 🤔 Optional | Would be great, but Railway uses dynamic IPs. Hard to maintain. |
+| **Ignore Bots** | ❌ NO | For web scrapers, not API calls. |
+| **No Response Body** | ❌ NO | You need the response (the A/V script!). |
+| **Response Code/Data/Headers** | ❌ NO | Defaults are fine. |
+| **Raw Body** | ❌ NO | JSON works perfectly. |
+
+**Bottom line**: Use Header Auth with `X-API-Key`. It's secure, simple, and perfect for server-to-server communication.
 
 ## n8n Workflow Details
 
 Your workflow consists of:
-1. **Webhook**: Receives reel URL
+1. **Webhook**: Receives reel URL (with Header Auth enabled)
 2. **Get Reels** (Apify): Scrapes Instagram reel data
 3. **Analyze Vid** (Google Gemini): Creates A/V script breakdown
 4. **Respond to Webhook**: Returns result
