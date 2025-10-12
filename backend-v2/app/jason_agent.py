@@ -240,26 +240,7 @@ def build_reel_transcriber_tool() -> FunctionTool:
     """
     Build the Instagram reel transcriber tool.
     """
-    return FunctionTool(
-        name="transcribe_instagram_reel",
-        description=(
-            "Transcribe and analyze an Instagram reel to create a detailed Audio/Visual (A/V) script. "
-            "Use this when a user shares an Instagram reel URL and wants to understand the content structure, "
-            "see what's being said, or analyze the video's script breakdown. "
-            "Returns a detailed scene-by-scene breakdown with visual descriptions and audio/dialogue."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "reel_url": {
-                    "type": "string",
-                    "description": "The Instagram reel URL (e.g., https://www.instagram.com/p/ABC123/ or https://www.instagram.com/reel/ABC123/)"
-                }
-            },
-            "required": ["reel_url"]
-        },
-        function=transcribe_instagram_reel
-    )
+    return FunctionTool(transcribe_instagram_reel)
 
 
 def build_file_search_tool() -> FileSearchTool:
