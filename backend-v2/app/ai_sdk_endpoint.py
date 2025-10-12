@@ -89,6 +89,7 @@ class AISDKChatHandler:
                     run_config=RunConfig(
                         model_settings=ModelSettings(
                             parallel_tool_calls=True,
+                            reasoning_effort="low",  # ✨ CRITICAL: Fast thinking mode (2-3s)
                             verbosity="low",
                         )
                     ),
