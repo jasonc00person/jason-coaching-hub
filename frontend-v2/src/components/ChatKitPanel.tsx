@@ -252,7 +252,7 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
   });
 
   return (
-    <div className="flex-1 relative w-full overflow-hidden bg-[#0f0f0f]" style={{ minHeight: 0 }}>
+    <div className="flex-1 relative w-full overflow-hidden" style={{ minHeight: 0 }}>
       {integrationError && (
         <div className="absolute top-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-20 sm:max-w-md safe-top">
           <div className="bg-red-900/95 backdrop-blur-sm border border-red-700/50 rounded-xl p-4 shadow-2xl">
