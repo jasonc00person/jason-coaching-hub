@@ -2,9 +2,14 @@ import { StartScreenPrompt } from "@openai/chatkit";
 
 export const THEME_STORAGE_KEY = "jason-coaching-theme";
 
-// Use Railway for backend API
+// Backend API - automatically uses correct environment
+// Production (main branch): uses production Railway URL
+// Staging (dev branch): uses staging Railway URL (set in Vercel environment variables)
+// Development (local): uses localhost
 const API_BASE = import.meta.env.VITE_API_BASE ?? (
-  import.meta.env.DEV ? "http://localhost:8000/" : "https://jason-coaching-backend-production.up.railway.app/"
+  import.meta.env.DEV 
+    ? "http://localhost:8000/" 
+    : "https://jason-coaching-backend-production.up.railway.app/"
 );
 
 console.log("=== CONFIG.TS LOADED ===");

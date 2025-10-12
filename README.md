@@ -2,6 +2,21 @@
 
 AI-powered coaching assistant for content creators, powered by GPT-5 and OpenAI's Agent SDK.
 
+## 🎯 Quick Links
+
+**New to staging/production workflow?**
+- 👉 **[START HERE](START_HERE.md)** ← Read this first!
+
+**Reference Guides:**
+- ⚡ **[Quick Reference](QUICK_REFERENCE.md)** - TL;DR cheat sheet
+- 🚀 **[Staging Setup Guide](STAGING_SETUP_GUIDE.md)** - Complete setup walkthrough  
+- 📊 **[Architecture Diagram](STAGING_ARCHITECTURE.md)** - Visual flow explanation
+- 🔧 **[Environment Variables](ENVIRONMENT_VARIABLES.md)** - What to set where
+- 📝 **[Git Workflow](GIT_WORKFLOW.md)** - Daily git commands
+
+**Quick Setup:**
+- 💻 Run `./setup-staging.sh` to create dev branch automatically
+
 ## 🚀 Tech Stack
 
 - **Backend**: FastAPI + OpenAI Agents SDK 0.3.3
