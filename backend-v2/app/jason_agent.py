@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import os
+import requests
+from typing import Any
 
 from agents import Agent
-from agents.models.openai_responses import FileSearchTool, WebSearchTool
+from agents.models.openai_responses import FileSearchTool, WebSearchTool, FunctionTool
 from chatkit.agents import AgentContext
 
 JASON_VECTOR_STORE_ID = os.getenv("JASON_VECTOR_STORE_ID", "vs_68e6b33ec38481919601875ea1e2287c")
+N8N_REEL_TRANSCRIBER_WEBHOOK = os.getenv("N8N_REEL_TRANSCRIBER_WEBHOOK", "")
 
 # ============================================================================
 # UNIFIED GPT-5 AGENT WITH INTELLIGENT ROUTING
@@ -93,6 +96,24 @@ Do NOT explicitly mention the tool. Instead say:
 - "Lemme see what's popping off..."
 - "Let me look that up real quick..."
 
+## transcribe_instagram_reel
+
+The `transcribe_instagram_reel` tool analyzes Instagram reels and creates detailed Audio/Visual (A/V) script breakdowns showing what's happening visually and what's being said.
+
+Use this tool when:
+- User shares an Instagram reel URL and wants to analyze the content
+- User asks "what's in this reel" or "can you break down this video"
+- User wants to understand the script/structure of a reel
+- User wants to see how a successful reel is structured (for learning purposes)
+- User asks you to transcribe or analyze any Instagram reel/video
+
+Do NOT explicitly mention the tool. Instead say something natural like:
+- "Let me check out that reel..."
+- "Alright lemme analyze this real quick..."
+- "Let me break down what's happening in this video..."
+
+Note: This tool takes 30-60 seconds to process (scraping + AI analysis), so after calling it, be patient and wait for the result before responding.
+
 ## Image Analysis
 
 When users send images (thumbnails, screenshots, content), analyze them directly and provide feedback naturally. You don't need to ask permission - just analyze and give your take.
@@ -153,6 +174,87 @@ Keep it real, keep it actionable, keep them inspired. That's the whole vibe.
 """.strip()
 
 
+# ============================================================================
+# CUSTOM TOOL: INSTAGRAM REEL TRANSCRIBER
+# ============================================================================
+
+def transcribe_instagram_reel(reel_url: str) -> str:
+    """
+    Transcribe an Instagram reel into an A/V script format.
+    
+    This tool takes an Instagram reel URL, scrapes the video, and uses AI to
+    analyze it and create a detailed Audio/Visual script breakdown showing
+    what's happening visually and what's being said.
+    
+    Args:
+        reel_url: The Instagram reel URL (e.g., https://www.instagram.com/p/ABC123/)
+    
+    Returns:
+        A detailed A/V script breakdown of the reel content
+    """
+    if not N8N_REEL_TRANSCRIBER_WEBHOOK:
+        return "Error: Instagram reel transcriber is not configured. Please set the N8N_REEL_TRANSCRIBER_WEBHOOK environment variable."
+    
+    try:
+        # Call the n8n webhook
+        response = requests.post(
+            N8N_REEL_TRANSCRIBER_WEBHOOK,
+            json={"Reel URL": reel_url},
+            timeout=120  # 2 minute timeout (scraping + AI analysis takes time)
+        )
+        response.raise_for_status()
+        
+        # Extract the transcription from the response
+        result = response.json()
+        
+        # The response structure from the workflow
+        if isinstance(result, list) and len(result) > 0:
+            # Get the Gemini analysis result
+            content = result[0].get("content", {})
+            parts = content.get("parts", [])
+            if parts and len(parts) > 0:
+                transcription = parts[0].get("text", "")
+                return transcription
+        
+        # Fallback if structure is different
+        return f"Successfully processed reel, but unexpected response format: {str(result)[:500]}"
+    
+    except requests.Timeout:
+        return "Error: The reel transcription is taking longer than expected. This usually happens with very long videos or network issues. Please try again."
+    
+    except requests.RequestException as e:
+        return f"Error transcribing reel: {str(e)}"
+    
+    except Exception as e:
+        return f"Unexpected error: {str(e)}"
+
+
+def build_reel_transcriber_tool() -> FunctionTool:
+    """
+    Build the Instagram reel transcriber tool.
+    """
+    return FunctionTool(
+        name="transcribe_instagram_reel",
+        description=(
+            "Transcribe and analyze an Instagram reel to create a detailed Audio/Visual (A/V) script. "
+            "Use this when a user shares an Instagram reel URL and wants to understand the content structure, "
+            "see what's being said, or analyze the video's script breakdown. "
+            "Returns a detailed scene-by-scene breakdown with visual descriptions and audio/dialogue."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "reel_url": {
+                    "type": "string",
+                    "description": "The Instagram reel URL (e.g., https://www.instagram.com/p/ABC123/ or https://www.instagram.com/reel/ABC123/)"
+                }
+            },
+            "required": ["reel_url"]
+        },
+        function=transcribe_instagram_reel
+    )
+
+
 def build_file_search_tool() -> FileSearchTool:
     """
     Enhanced file search optimized for speed.
@@ -197,6 +299,10 @@ jason_agent = Agent[AgentContext](
     model="gpt-5",
     name="jason_agent",
     instructions=JASON_INSTRUCTIONS,
-    tools=[build_file_search_tool(), build_web_search_tool()],
+    tools=[
+        build_file_search_tool(),
+        build_web_search_tool(),
+        build_reel_transcriber_tool(),
+    ],
 )
 
