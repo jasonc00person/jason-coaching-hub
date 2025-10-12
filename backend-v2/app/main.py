@@ -320,11 +320,29 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 )
                 # 🔧 Stream events with ChatKit conversion
                 async for chatkit_event in stream_agent_response(agent_context, result):
+                    # Debug: Log event structure
+                    if DEBUG_MODE:
+                        print(f"[EVENT] Type: {type(chatkit_event).__name__}")
+                        if hasattr(chatkit_event, 'delta'):
+                            print(f"[EVENT] Delta: {repr(chatkit_event.delta)}")
+                        if hasattr(chatkit_event, 'text'):
+                            print(f"[EVENT] Text: {repr(chatkit_event.text[:100] if chatkit_event.text else None)}")
+                    
                     # Strip annotation markers from text deltas
                     # Even with chatkit 1.0.2, these markers still appear in text
                     # and need manual stripping (confirmed via official samples)
                     if hasattr(chatkit_event, 'delta') and isinstance(chatkit_event.delta, str):
+                        original = chatkit_event.delta
                         chatkit_event.delta = _strip_annotation_markers(chatkit_event.delta)
+                        if original != chatkit_event.delta and DEBUG_MODE:
+                            print(f"[STRIPPED] {repr(original)} -> {repr(chatkit_event.delta)}")
+                    
+                    # Also check for 'text' field
+                    if hasattr(chatkit_event, 'text') and isinstance(chatkit_event.text, str):
+                        original = chatkit_event.text
+                        chatkit_event.text = _strip_annotation_markers(chatkit_event.text)
+                        if original != chatkit_event.text and DEBUG_MODE:
+                            print(f"[STRIPPED TEXT] {repr(original[:100])} -> {repr(chatkit_event.text[:100])}")
                     
                     yield chatkit_event
         else:
@@ -350,6 +368,10 @@ class JasonCoachingServer(ChatKitServer[dict[str, Any]]):
                 # and need manual stripping (confirmed via official samples)
                 if hasattr(chatkit_event, 'delta') and isinstance(chatkit_event.delta, str):
                     chatkit_event.delta = _strip_annotation_markers(chatkit_event.delta)
+                
+                # Also check for 'text' field
+                if hasattr(chatkit_event, 'text') and isinstance(chatkit_event.text, str):
+                    chatkit_event.text = _strip_annotation_markers(chatkit_event.text)
                 
                 yield chatkit_event
 
