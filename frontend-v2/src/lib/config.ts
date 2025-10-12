@@ -6,7 +6,7 @@ export const THEME_STORAGE_KEY = "jason-coaching-theme";
 // Production (main branch): uses VITE_API_BASE or production Railway URL
 // Staging (dev branch): uses VITE_API_BASE_1 (Preview env) or VITE_API_BASE
 // Development (local): uses localhost
-const API_BASE = 
+export const API_BASE = 
   import.meta.env.VITE_API_BASE_1 ?? // Check Preview env variable first
   import.meta.env.VITE_API_BASE ?? // Then Production env variable
   (import.meta.env.DEV 

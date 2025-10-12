@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { Response } from "@/components/ui/response";
 import { cn } from "@/lib/utils";
+import { API_BASE } from "@/lib/config";
 
 interface ChatMessage {
   id: string;
@@ -169,7 +170,7 @@ function App() {
     }
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch(`${API_BASE}api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
