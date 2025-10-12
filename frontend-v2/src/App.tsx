@@ -31,7 +31,7 @@ function App() {
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
         
         {/* ChatKit Panel */}
-        <div className="relative h-full w-full">
+        <div className="relative h-full w-full flex flex-col">
           <ChatKitPanel theme={theme} />
         </div>
       </div>
