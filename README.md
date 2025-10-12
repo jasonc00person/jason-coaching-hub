@@ -2,10 +2,26 @@
 
 AI-powered coaching assistant for content creators, powered by GPT-5 and OpenAI's Agent SDK.
 
+## ⚠️ DEPLOYMENT RULE ⚠️
+
+**🚨 DEFAULT: ALWAYS PUSH TO `dev` BRANCH**
+- ✅ Work on `dev` → test on staging → only merge to `main` when told
+- ⛔ NEVER push to `main` unless explicitly instructed
+- 📖 Read **[DEPLOYMENT_WORKFLOW.md](DEPLOYMENT_WORKFLOW.md)** for details
+
+**Quick Commands:**
+```bash
+./push-to-staging.sh        # Safe push to dev (use this 99% of the time)
+./push-to-production.sh     # Deploy to production (DANGEROUS - use only when told)
+```
+
+---
+
 ## 🎯 Quick Links
 
 **New to staging/production workflow?**
 - 👉 **[START HERE](START_HERE.md)** ← Read this first!
+- 🚨 **[DEPLOYMENT WORKFLOW](DEPLOYMENT_WORKFLOW.md)** ← Read this before pushing code!
 
 **Reference Guides:**
 - ⚡ **[Quick Reference](QUICK_REFERENCE.md)** - TL;DR cheat sheet
@@ -158,15 +174,30 @@ strategy_agent = Agent(model="gpt-5")         # Deep strategy
 
 ## 🚀 Deployment
 
-### Backend (Railway)
-- Auto-deploys from `main` branch
-- Environment variables set in Railway dashboard
-- Health check: `https://your-backend.railway.app/health`
+### Staging Environment (dev branch) - **USE THIS FOR TESTING**
+**Frontend**: https://jason-coaching-hub-git-dev-creator-economy.vercel.app  
+**Backend**: https://jason-coaching-backend-staging.up.railway.app  
+**Purpose**: Test all changes here first before production
 
-### Frontend (Vercel)
-- Auto-deploys from `main` branch
-- Environment variables in Vercel project settings
-- Production URL: `https://your-app.vercel.app`
+### Production Environment (main branch) - **DEPLOY ONLY WHEN TOLD**
+**Frontend**: Your main Vercel domain  
+**Backend**: https://jason-coaching-backend-production.up.railway.app  
+**Purpose**: Live site for real users
+
+### Auto-Deployment
+- Push to `dev` → Auto-deploys to staging (safe!)
+- Push to `main` → Auto-deploys to production (⚠️ dangerous!)
+
+### Quick Deploy Commands
+```bash
+# Deploy to staging (use this 99% of the time)
+./push-to-staging.sh
+
+# Deploy to production (ONLY when explicitly told)
+./push-to-production.sh
+```
+
+**See [DEPLOYMENT_WORKFLOW.md](DEPLOYMENT_WORKFLOW.md) for detailed instructions.**
 
 ## 📝 Environment Variables
 
@@ -242,7 +273,8 @@ For issues or questions:
 
 ---
 
-**Last Updated**: October 9, 2025  
+**Last Updated**: October 12, 2025  
 **ChatKit Version**: 0.0.2 (backend) / 0.0.0 (frontend)  
 **Agent SDK Version**: 0.3.3  
-**Models**: GPT-5 + GPT-5-mini
+**Models**: GPT-5 + GPT-5-mini  
+**Deployment**: Staging + Production environments fully operational

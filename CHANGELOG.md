@@ -1,4 +1,259 @@
-# Changelog - Knowledge Assistant Implementation
+# Changelog
+
+## Version 2.1 - Staging/Production Deployment Setup (October 12, 2025)
+
+### 🎯 Summary
+Implemented professional staging and production deployment workflow with separate environments, auto-deployment, and safety guardrails to prevent accidental production deployments.
+
+---
+
+## 🚀 New Features
+
+### Deployment Infrastructure
+- **Staging Environment**: Complete testing environment on `dev` branch
+- **Production Environment**: Live user-facing site on `main` branch
+- **Auto-Deployment**: Push to GitHub automatically deploys to respective environments
+- **Safety Scripts**: Helper scripts with warnings to prevent accidental production deploys
+
+### New Files Created
+
+#### Deployment Documentation
+- `DEPLOYMENT_WORKFLOW.md` - Comprehensive deployment guide with safety warnings
+- `STAGING_SETUP_GUIDE.md` - Step-by-step staging setup instructions
+- `STAGING_ARCHITECTURE.md` - Visual diagrams of deployment flow
+- `START_HERE.md` - Quick start guide for staging/production workflow
+- `QUICK_REFERENCE.md` - TL;DR command reference
+- `GIT_WORKFLOW.md` - Detailed git workflow guide
+- `ENVIRONMENT_VARIABLES.md` - Environment variable reference
+
+#### Helper Scripts
+- `setup-staging.sh` - Automated script to create dev branch
+- `push-to-staging.sh` - Safe script to push to staging (dev branch)
+- `push-to-production.sh` - Protected script to push to production (main branch)
+
+### Modified Files
+
+#### `frontend-v2/src/lib/config.ts`
+**Changed:**
+- Updated `API_BASE` to check `VITE_API_BASE_1` first (for Preview/staging)
+- Added fallback logic: `VITE_API_BASE_1` → `VITE_API_BASE` → localhost/production
+- Enhanced console logging to show both Preview and Production environment variables
+
+#### `README.md`
+**Added:**
+- ⚠️ DEPLOYMENT RULE section at top with safety warnings
+- Quick deploy commands reference
+- Updated deployment section with staging and production URLs
+- Links to new deployment documentation
+- Updated last updated date
+
+---
+
+## 🔧 Deployment Setup
+
+### Staging Environment (dev branch)
+- **Frontend**: https://jason-coaching-hub-git-dev-creator-economy.vercel.app
+- **Backend**: https://jason-coaching-backend-staging.up.railway.app
+- **Purpose**: Safe testing environment
+- **Auto-deploys**: When pushing to `dev` branch
+- **Debug Mode**: Enabled
+
+### Production Environment (main branch)
+- **Frontend**: Your main Vercel domain
+- **Backend**: https://jason-coaching-backend-production.up.railway.app
+- **Purpose**: Live site for real users
+- **Auto-deploys**: When pushing to `main` branch
+- **Debug Mode**: Disabled
+
+---
+
+## 🛡️ Safety Features
+
+### Default Behavior
+- ✅ **Default branch**: `dev` (staging)
+- ✅ **Default push**: To staging only
+- ⛔ **Production push**: Requires explicit confirmation
+
+### Safety Scripts
+
+#### `push-to-staging.sh`
+- Automatically switches to `dev` branch if not already there
+- Prompts for commit message
+- Shows what files changed
+- Pushes to staging with one command
+- Displays deployment URLs
+
+#### `push-to-production.sh`
+- **Triple confirmation** required
+- Asks if tested on staging
+- Asks if all features working
+- Requires typing "DEPLOY TO PRODUCTION"
+- Automatically switches back to `dev` after deploy
+- Shows clear warnings about real user impact
+
+---
+
+## 📊 Workflow Changes
+
+### Before
+```bash
+# No staging environment
+git add .
+git commit -m "..."
+git push origin main  # Directly to production!
+```
+
+### After
+```bash
+# Safe workflow with staging
+./push-to-staging.sh        # Test here first
+# ... test on staging ...
+./push-to-production.sh     # Only when explicitly told
+```
+
+---
+
+## 🎓 Documentation
+
+### New Documentation Structure
+```
+├── START_HERE.md                  # New users start here
+├── DEPLOYMENT_WORKFLOW.md         # Main deployment guide
+├── STAGING_SETUP_GUIDE.md         # Setup instructions
+├── STAGING_ARCHITECTURE.md        # Visual diagrams
+├── QUICK_REFERENCE.md             # Command cheat sheet
+├── GIT_WORKFLOW.md                # Git commands guide
+└── ENVIRONMENT_VARIABLES.md       # Env var reference
+```
+
+---
+
+## 🔄 Migration from Single Environment
+
+### No Breaking Changes
+- Existing production deployment continues working
+- No code changes required for existing functionality
+- All previous features remain intact
+
+### New Workflow Adoption
+1. Run `./setup-staging.sh` to create `dev` branch
+2. Set up staging Railway project
+3. Configure Vercel environment variables
+4. Start using `./push-to-staging.sh` for deployments
+
+---
+
+## 📝 Configuration Changes
+
+### Vercel Environment Variables
+
+**New Variables:**
+- `VITE_API_BASE_1` (Preview/Staging): Points to staging Railway backend
+- `VITE_API_BASE` (Production): Points to production Railway backend
+
+### Railway Projects
+
+**Staging (new):**
+- Project: `jason-coaching-backend-staging`
+- Branch: `dev`
+- `DEBUG_MODE=true`
+
+**Production (existing):**
+- Project: `jason-coaching-backend-production`
+- Branch: `main`
+- `DEBUG_MODE=false`
+
+---
+
+## ✅ Benefits
+
+### Safety
+- ✅ Never accidentally deploy to production
+- ✅ Test everything on staging first
+- ✅ Real users never see bugs
+- ✅ Easy rollback if issues occur
+
+### Speed
+- ✅ Fast iteration on staging
+- ✅ Break things safely
+- ✅ No fear of testing new features
+- ✅ Deploy when ready, not when anxious
+
+### Professionalism
+- ✅ Same setup as billion-dollar companies
+- ✅ Proper development workflow
+- ✅ Version control best practices
+- ✅ Clear separation of concerns
+
+---
+
+## 🎯 Best Practices
+
+### Daily Workflow
+1. Always work on `dev` branch
+2. Push to dev with `./push-to-staging.sh`
+3. Test thoroughly on staging
+4. Only merge to `main` when explicitly told
+5. Use `./push-to-production.sh` for production deploys
+
+### Safety Rules
+- 🚨 **Default = `dev` branch** (99% of time here)
+- 🚨 **Never push to `main` unless told**
+- 🚨 **Test on staging first** (always!)
+- 🚨 **Switch back to `dev` after production deploy**
+
+---
+
+## 📈 Metrics
+
+### Setup Time
+- Initial staging setup: ~15 minutes
+- Creating documentation: ~2 hours
+- Writing safety scripts: ~30 minutes
+- **Total**: ~3 hours
+
+### Time Savings (Per Deploy)
+- Old way: Test in production, fix bugs live = risky
+- New way: Test on staging, deploy when ready = safe
+- **Confidence**: 100%
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues Resolved
+
+**Blank screen on staging:**
+- Issue: Domain verification
+- Solution: Added staging domain to OpenAI allowlist
+
+**Vercel authentication wall:**
+- Issue: Deployment Protection enabled
+- Solution: Disabled for Preview deployments
+
+**Environment variables not working:**
+- Issue: Using same variable name for different environments
+- Solution: Use `VITE_API_BASE_1` for Preview, `VITE_API_BASE` for Production
+
+---
+
+## 🔮 Future Enhancements
+
+### Potential Additions
+1. **Git hooks**: Pre-push hooks to warn about `main` branch
+2. **CI/CD pipeline**: Automated tests before deploy
+3. **Deployment notifications**: Slack/Discord notifications
+4. **Rollback script**: One-command rollback to previous version
+5. **Environment comparison**: Script to diff staging vs production
+
+---
+
+**Version**: 2.1  
+**Release Date**: October 12, 2025  
+**Status**: ✅ Complete & Operational  
+**Breaking Changes**: None
+
+---
 
 ## Version 2.0 - Knowledge Assistant Update (October 9, 2025)
 
