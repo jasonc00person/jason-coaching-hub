@@ -1088,3 +1088,83 @@ async def handle_widget_action(request: Request) -> dict[str, str]:
     except Exception as e:
         print(f"[Widget Action] Error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to handle widget action: {str(e)}")
+
+
+@app.get("/api/thread/{thread_id}/first-message")
+async def get_thread_first_message(
+    thread_id: str,
+    request: Request,
+    server: JasonCoachingServer = Depends(get_server)
+) -> JSONResponse:
+    """Get the first user message from a thread for title generation."""
+    try:
+        print(f"[First Message] Attempting to load thread: {thread_id}")
+        # Create context with request (needed for session-based store)
+        context = {"request": request}
+        
+        # Get thread from store using dependency-injected server
+        try:
+            thread_metadata = await server.store.load_thread(thread_id, context)
+        except Exception as e:
+            print(f"[First Message] Thread load failed: {e}")
+            return JSONResponse({"message": None}, status_code=404)
+        
+        if not thread_metadata:
+            print(f"[First Message] Thread not found: {thread_id}")
+            return JSONResponse({"message": None}, status_code=404)
+        
+        print(f"[First Message] Thread metadata type: {type(thread_metadata)}")
+        print(f"[First Message] Thread metadata: {thread_metadata}")
+        
+        # Load thread items from the store
+        items_page = await server.store.load_thread_items(thread_id, after=None, limit=10, order="asc", context=context)
+        items = items_page.data
+        
+        print(f"[First Message] Found {len(items)} items in thread")
+        
+        # Find first user message
+        for i, item in enumerate(items):
+            print(f"[First Message] Item {i}: type={type(item).__name__}, item={item}")
+            
+            # Check if it's a UserMessageItem
+            if isinstance(item, UserMessageItem):
+                # Extract text using helper function
+                text = _user_message_text(item)
+                if text:
+                    print(f"[First Message] Found user message (UserMessageItem): {text[:100]}...")
+                    return JSONResponse({"message": text})
+            
+            # Also try dict format
+            if isinstance(item, dict):
+                item_type = item.get('type')
+                print(f"[First Message] Dict item type: {item_type}")
+                if item_type == 'user_message':
+                    # Try to extract text from content
+                    content = item.get('content', [])
+                    for part in content:
+                        if isinstance(part, dict):
+                            text = part.get('text')
+                            if text:
+                                print(f"[First Message] Found user message (dict): {text[:100]}...")
+                                return JSONResponse({"message": text})
+            
+            # Try hasattr approach for any object with type attribute
+            if hasattr(item, 'type'):
+                print(f"[First Message] Item has type attribute: {item.type}")
+                if getattr(item, 'type', None) == 'user_message':
+                    if hasattr(item, 'content'):
+                        # Try to extract text
+                        content = item.content if isinstance(item.content, list) else [item.content]
+                        for part in content:
+                            text = getattr(part, 'text', None)
+                            if text:
+                                print(f"[First Message] Found user message (attr): {text[:100]}...")
+                                return JSONResponse({"message": text})
+        
+        print(f"[First Message] No user message found in thread {thread_id}")
+        return JSONResponse({"message": None})
+    except Exception as e:
+        print(f"[First Message] Error fetching first message for thread {thread_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"message": None}, status_code=500)

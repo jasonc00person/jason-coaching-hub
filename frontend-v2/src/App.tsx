@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ChatKitPanel } from "@/components/ChatKitPanel";
 import { Sidebar } from "@/components/Sidebar";
 import { THEME_STORAGE_KEY } from "@/lib/config";
 import { useConversations } from "@/hooks/useConversations";
+import { generateConversationTitle } from "@/lib/utils";
 
 type ColorScheme = "light" | "dark";
 
@@ -19,7 +20,10 @@ function App() {
   // ChatKit control and conversation state
   const [chatkitControl, setChatkitControl] = useState<any>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
-  const { conversations, addConversation } = useConversations();
+  const { conversations, addConversation, updateTitle } = useConversations();
+  
+  // Track threads that need title updates
+  const pendingTitleThreads = useRef<Set<string>>(new Set());
 
   // Save theme changes to localStorage
   useEffect(() => {
@@ -60,8 +64,39 @@ function App() {
     // Add conversation to list if it's new
     if (data.threadId && !conversations.find(c => c.id === data.threadId)) {
       addConversation(data.threadId, "New conversation");
+      // Mark for title update after first message
+      pendingTitleThreads.current.add(data.threadId);
     }
   }, [conversations, addConversation]);
+
+  const handleResponseEnd = useCallback(async () => {
+    if (!activeThreadId || !pendingTitleThreads.current.has(activeThreadId)) {
+      return;
+    }
+    
+    try {
+      console.log("[App] Fetching first message for title generation:", activeThreadId);
+      
+      // Get session ID from sessionStorage  
+      const sessionId = sessionStorage.getItem('chatSessionId');
+      
+      // Fetch first message from backend (include session ID as query param)
+      const url = `http://localhost:8000/api/thread/${activeThreadId}/first-message${sessionId ? `?sid=${sessionId}` : ''}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.message) {
+        const title = generateConversationTitle(data.message);
+        console.log("[App] Generated title:", title);
+        updateTitle(activeThreadId, title);
+        
+        // Remove from pending list
+        pendingTitleThreads.current.delete(activeThreadId);
+      }
+    } catch (error) {
+      console.error("[App] Failed to fetch first message:", error);
+    }
+  }, [activeThreadId, updateTitle]);
 
   const handleControlReady = useCallback((control: any) => {
     console.log("[App] ChatKit control ready");
@@ -91,6 +126,7 @@ function App() {
           theme={theme}
           onControlReady={handleControlReady}
           onThreadChange={handleThreadChange}
+          onResponseEnd={handleResponseEnd}
         />
       </div>
     </div>
