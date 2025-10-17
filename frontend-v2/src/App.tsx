@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ChatKitPanel } from "@/components/ChatKitPanel";
 import { Sidebar } from "@/components/Sidebar";
-import { THEME_STORAGE_KEY } from "@/lib/config";
+import { THEME_STORAGE_KEY, API_BASE } from "@/lib/config";
 import { useConversations } from "@/hooks/useConversations";
 import { generateConversationTitle } from "@/lib/utils";
 
@@ -81,7 +81,8 @@ function App() {
       const sessionId = sessionStorage.getItem('chatSessionId');
       
       // Fetch first message from backend (include session ID as query param)
-      const url = `http://localhost:8000/api/thread/${activeThreadId}/first-message${sessionId ? `?sid=${sessionId}` : ''}`;
+      const url = `${API_BASE}api/thread/${activeThreadId}/first-message${sessionId ? `?sid=${sessionId}` : ''}`;
+      console.log("[App] Fetching from URL:", url);
       const response = await fetch(url);
       const data = await response.json();
       
