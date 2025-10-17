@@ -10,6 +10,8 @@ import {
 
 type ChatKitPanelProps = {
   theme: "light" | "dark";
+  onControlReady?: (control: any) => void;
+  onThreadChange?: (data: { threadId: string | null }) => void;
 };
 
 // Generate session ID outside component to ensure it's ready immediately
@@ -22,7 +24,7 @@ const getOrCreateSessionId = (): string => {
   return sid;
 };
 
-export function ChatKitPanel({ theme }: ChatKitPanelProps) {
+export function ChatKitPanel({ theme, onControlReady, onThreadChange }: ChatKitPanelProps) {
   const [integrationError, setIntegrationError] = useState<string | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
   const isMounted = useRef(true);
@@ -73,6 +75,7 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
       },
       radius: "round",
     },
+    header: { enabled: false }, // Disable ChatKit's built-in header
     startScreen: {
       greeting: GREETING,
       prompts: STARTER_PROMPTS,
@@ -229,10 +232,14 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
       console.log("[ChatKitPanel] Response started - chat has begun");
       setHasStarted(true);
     },
-    onThreadChange: () => {
-      console.log("[ChatKitPanel] Thread changed");
+    onThreadChange: (data) => {
+      console.log("[ChatKitPanel] Thread changed", data);
       // Mark as started when thread changes (message was sent)
       setHasStarted(true);
+      // Notify parent component
+      if (onThreadChange) {
+        onThreadChange(data);
+      }
     },
     onResponseEnd: (response) => {
       console.log("[ChatKitPanel] Response ended", response);
@@ -257,6 +264,21 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
     control: chatkit.control,
     chatkitKeys: Object.keys(chatkit)
   });
+
+  // Pass control methods back to parent component
+  useEffect(() => {
+    if (chatkit && onControlReady) {
+      console.log("[ChatKitPanel] Passing control methods to parent");
+      // Pass the chatkit object which contains setThreadId, sendUserMessage, etc.
+      onControlReady({
+        setThreadId: chatkit.setThreadId,
+        sendUserMessage: chatkit.sendUserMessage,
+        setComposerValue: chatkit.setComposerValue,
+        focusComposer: chatkit.focusComposer,
+        fetchUpdates: chatkit.fetchUpdates,
+      });
+    }
+  }, [chatkit, onControlReady]);
 
   return (
     <div 

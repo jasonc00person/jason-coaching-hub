@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { ChatKitPanel } from "@/components/ChatKitPanel";
-import { Moon, Sun } from "lucide-react";
+import { Sidebar } from "@/components/Sidebar";
 import { THEME_STORAGE_KEY } from "@/lib/config";
+import { useConversations } from "@/hooks/useConversations";
 
 type ColorScheme = "light" | "dark";
 
@@ -12,6 +13,14 @@ function App() {
     return (stored as ColorScheme) || "dark";
   });
 
+  // Sidebar open state (expanded by default)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // ChatKit control and conversation state
+  const [chatkitControl, setChatkitControl] = useState<any>(null);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const { conversations, addConversation } = useConversations();
+
   // Save theme changes to localStorage
   useEffect(() => {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -21,46 +30,68 @@ function App() {
     setTheme(newTheme);
   }, []);
 
+  const handleNewChat = useCallback(async () => {
+    if (chatkitControl) {
+      try {
+        console.log("[App] Starting new chat");
+        await chatkitControl.setThreadId(null);
+        setActiveThreadId(null);
+      } catch (error) {
+        console.error("[App] Failed to start new chat:", error);
+      }
+    }
+  }, [chatkitControl]);
+
+  const handleSelectConversation = useCallback(async (threadId: string) => {
+    if (chatkitControl) {
+      try {
+        console.log("[App] Switching to conversation:", threadId);
+        await chatkitControl.setThreadId(threadId);
+      } catch (error) {
+        console.error("[App] Failed to switch conversation:", error);
+      }
+    }
+  }, [chatkitControl]);
+
+  const handleThreadChange = useCallback((data: { threadId: string | null }) => {
+    console.log("[App] Thread changed:", data);
+    setActiveThreadId(data.threadId);
+    
+    // Add conversation to list if it's new
+    if (data.threadId && !conversations.find(c => c.id === data.threadId)) {
+      addConversation(data.threadId, "New conversation");
+    }
+  }, [conversations, addConversation]);
+
+  const handleControlReady = useCallback((control: any) => {
+    console.log("[App] ChatKit control ready");
+    setChatkitControl(control);
+  }, []);
+
+  // Dynamic background based on theme
+  const appBg = theme === "dark" ? "bg-slate-950" : "bg-slate-100";
+
   return (
-    <div className="h-screen w-full flex flex-col bg-slate-950">
-      {/* Header with theme toggle */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-        <h1 className="text-xl font-semibold text-slate-100">Jason's CoachGPT</h1>
-        
-        {/* Theme Toggle */}
-        <div className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/60 p-1 shadow-sm backdrop-blur-sm">
-          <button
-            type="button"
-            onClick={() => handleThemeChange("light")}
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors duration-200 ${
-              theme === "light"
-                ? "bg-slate-100 text-slate-900 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-            aria-label="Use light theme"
-            aria-pressed={theme === "light"}
-          >
-            <Sun className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => handleThemeChange("dark")}
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors duration-200 ${
-              theme === "dark"
-                ? "bg-slate-100 text-slate-900 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-            aria-label="Use dark theme"
-            aria-pressed={theme === "dark"}
-          >
-            <Moon className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+    <div className={`h-screen w-full flex ${appBg}`}>
+      {/* Sidebar */}
+      <Sidebar 
+        isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        theme={theme}
+        onThemeChange={handleThemeChange}
+        conversations={conversations}
+        activeThreadId={activeThreadId}
+        onNewChat={handleNewChat}
+        onSelectConversation={handleSelectConversation}
+      />
 
       {/* ChatKit Panel */}
       <div className="flex-1 overflow-hidden">
-        <ChatKitPanel theme={theme} />
+        <ChatKitPanel 
+          theme={theme}
+          onControlReady={handleControlReady}
+          onThreadChange={handleThreadChange}
+        />
       </div>
     </div>
   );
