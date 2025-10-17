@@ -260,7 +260,7 @@ export function ChatKitPanel({ theme }: ChatKitPanelProps) {
 
   return (
     <div 
-      className={`flex-1 relative w-full overflow-hidden ${hasStarted ? 'chat-started' : 'chat-empty'}`}
+      className={`flex-1 relative w-full h-full overflow-hidden ${hasStarted ? 'chat-started' : 'chat-empty'}`}
       style={{ minHeight: 0 }}
     >
       {integrationError && (
