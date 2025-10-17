@@ -12,7 +12,6 @@ type ChatKitPanelProps = {
   theme: "light" | "dark";
   onControlReady?: (control: any) => void;
   onThreadChange?: (data: { threadId: string | null }) => void;
-  onResponseEnd?: () => void;
 };
 
 // Generate session ID outside component to ensure it's ready immediately
@@ -25,7 +24,7 @@ const getOrCreateSessionId = (): string => {
   return sid;
 };
 
-export function ChatKitPanel({ theme, onControlReady, onThreadChange, onResponseEnd }: ChatKitPanelProps) {
+export function ChatKitPanel({ theme, onControlReady, onThreadChange }: ChatKitPanelProps) {
   const [integrationError, setIntegrationError] = useState<string | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
   const isMounted = useRef(true);
@@ -240,13 +239,6 @@ export function ChatKitPanel({ theme, onControlReady, onThreadChange, onResponse
       // Notify parent component
       if (onThreadChange) {
         onThreadChange(data);
-      }
-    },
-    onResponseEnd: (response) => {
-      console.log("[ChatKitPanel] Response ended", response);
-      // Call parent handler for title generation
-      if (onResponseEnd) {
-        onResponseEnd();
       }
     },
     onError: ({ error }) => {
