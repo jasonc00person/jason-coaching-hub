@@ -49,7 +49,7 @@ export function ThemeToggle({ isExpanded, theme, onChange }: ThemeToggleProps) {
     return (
       <button
         onClick={() => onChange(theme === "light" ? "dark" : "light")}
-        className={`w-full flex justify-center p-2 rounded-lg transition-colors ${collapsedClass}`}
+        className={`flex p-2 rounded-lg transition-colors w-fit ${collapsedClass}`}
         aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
       >
         {theme === "light" ? (
